@@ -108,11 +108,28 @@ Nella schermata **Progressi** trovi la sezione **Dati e Backup**:
 
 ---
 
-## 🗄️ Integrazione con un Database Cloud (Futuro)
+## ☁️ Sincronizzazione Cloud Automatica (Supabase)
 
-Se in futuro vorrai sincronizzare automaticamente i dati su più dispositivi con autenticazione utente:
-1. Consulta il file [`db-adapter.example.js`](./db-adapter.example.js).
-2. Fornisce già l'architettura ad eventi con i metodi:
-   - `init(state, helpers)`: carica i dati remoti al boot ed esegue il merge con quelli locali.
-   - `save(state, helpers)`: viene invocato automaticamente al termine di ogni round.
-3. Compatibile direttamente con **Supabase**, **Firebase Firestore** o qualsiasi backend REST.
+L'applicazione include il modulo integrato [`db-sync.js`](./db-sync.js) che permette di sincronizzare i dati su qualsiasi dispositivo e browser.
+
+### Come configurarlo in 3 passaggi:
+1. **Crea un progetto gratuito su [supabase.com](https://supabase.com)**.
+2. **Crea la tabella**: nella sezione **SQL Editor** di Supabase, esegui questo comando:
+   ```sql
+   create table user_calcolo (
+     user_id text primary key,
+     facts jsonb default '{}'::jsonb,
+     history jsonb default '[]'::jsonb,
+     settings jsonb default '{}'::jsonb,
+     updated_at timestamp with time zone default timezone('utc'::text, now())
+   );
+   alter table user_calcolo enable row level security;
+   create policy "Proprietario" on user_calcolo for all
+   using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+   ```
+3. **Collega l'app**:
+   - Apri l'app e tocca il pulsante **`☁️ Connetti Cloud`** nell'intestazione (o nella scheda Progressi).
+   - Incolla il tuo **Project URL** e la tua **Anon Public Key** (da *Project Settings* > *API* su Supabase).
+   - Accedi o crea un account con Email e Password (o Magic Link istantaneo).
+
+Da quel momento, ogni round giocato sul telefono o sul PC si sincronizzerà istantaneamente sul tuo account, mantenendo sempre la piena funzionalità offline quando non c'è campo!

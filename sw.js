@@ -1,8 +1,9 @@
-const CACHE_NAME = 'calcolo-mente-v1';
+const CACHE_NAME = 'calcolo-mente-v2';
 
 const STATIC_ASSETS = [
   './',
   './index.html',
+  './db-sync.js',
   './manifest.webmanifest',
   './favicon.svg',
   './icons/icon.svg',
@@ -35,15 +36,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Stale-while-revalidate for local assets, cache-first for Google Fonts
+// Fetch: Stale-while-revalidate for local assets, cache-first for CDN & Fonts
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Ignore non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Cache Google Fonts stylesheets & webfont files
-  if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') {
+  // Cache Google Fonts & Supabase CDN library
+  if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com' || url.origin === 'https://cdn.jsdelivr.net') {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
         const cached = await cache.match(event.request);
