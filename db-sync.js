@@ -7,8 +7,8 @@
 (function(){
   // Configurazione predefinita (può essere compilata qui o impostata direttamente dall'app)
   const DEFAULT_CONFIG = {
-    url: '',      // es: 'https://abcdefgh.supabase.co'
-    anonKey: ''  // es: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    url: 'https://uzzlomuxlkswkujszexj.supabase.co',      // es: 'https://abcdefgh.supabase.co'
+    anonKey: 'sb_publishable_gTe8tdkpxDtyCTKufSU8cA_A9YUSeo6'  // es: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   };
 
   const LS_CONFIG_KEY = 'calcolo_supabase_cfg';
@@ -201,10 +201,12 @@
     createModalHtml();
     const modal = document.getElementById('modal-cloud-sync');
     const body = document.getElementById('modal-body');
+    const title = document.getElementById('modal-title');
     const cfg = getConfig();
 
     // 1. Schermata Configurazione (se mancano URL e Anon Key)
     if(!cfg.url || !cfg.anonKey){
+      if(title) title.textContent = 'Connetti Supabase';
       body.innerHTML = `
         <p class="hint" style="margin:0">Collega il tuo database <b>Supabase</b> gratuito per sincronizzare i tuoi progressi su tutti i dispositivi senza dover rifare login ogni volta.</p>
         
@@ -251,6 +253,7 @@ using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);</pre
 
     // 2. Schermata Utente Connesso (se loggato)
     if(currentUser){
+      if(title) title.textContent = 'Il tuo Account';
       body.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:14px">
           <div style="background:var(--soft);padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:4px">
@@ -264,7 +267,7 @@ using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);</pre
             <button class="btn" id="btn-logout" style="color:var(--slow);border-color:color-mix(in srgb,var(--slow) 35%,var(--line))">Esci</button>
           </div>
 
-          <button class="btn pill mut" id="btn-reconfig" style="align-self:center;font-size:11.5px">Modifica parametri Supabase</button>
+          ${!DEFAULT_CONFIG.url ? '<button class="btn pill mut" id="btn-reconfig" style="align-self:center;font-size:11.5px">Modifica parametri Supabase</button>' : ''}
         </div>
       `;
 
@@ -290,16 +293,20 @@ using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);</pre
         }
       };
 
-      document.getElementById('btn-reconfig').onclick = () => {
-        localStorage.removeItem(LS_CONFIG_KEY);
-        showSyncModal();
-      };
+      const reconfigBtn = document.getElementById('btn-reconfig');
+      if(reconfigBtn){
+        reconfigBtn.onclick = () => {
+          localStorage.removeItem(LS_CONFIG_KEY);
+          showSyncModal();
+        };
+      }
 
       modal.hidden = false;
       return;
     }
 
     // 3. Schermata Login / Registrazione Rapida
+    if(title) title.textContent = 'Accedi al tuo Account';
     body.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:12px">
         <div class="seg" id="auth-tabs" style="width:100%;justify-content:center">
@@ -323,7 +330,7 @@ using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);</pre
           <button class="btn pill mut" id="btn-magic-link" style="font-size:11.5px">Oppure invia Magic Link (senza password)</button>
         </div>
 
-        <button class="btn pill mut" id="btn-reconfig" style="align-self:center;font-size:11.5px;margin-top:6px">Modifica parametri Supabase</button>
+        ${!DEFAULT_CONFIG.url ? '<button class="btn pill mut" id="btn-reconfig" style="align-self:center;font-size:11.5px;margin-top:6px">Modifica parametri Supabase</button>' : ''}
       </div>
     `;
 
@@ -394,10 +401,24 @@ using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);</pre
       }
     };
 
-    document.getElementById('btn-reconfig').onclick = () => {
-      localStorage.removeItem(LS_CONFIG_KEY);
-      showSyncModal();
-    };
+    const reconfigAuthBtn = document.getElementById('btn-reconfig');
+    if(reconfigAuthBtn){
+      reconfigAuthBtn.onclick = () => {
+        localStorage.removeItem(LS_CONFIG_KEY);
+        showSyncModal();
+      };
+    }
+
+    const emailInput = document.getElementById('auth-email');
+    const pwInput = document.getElementById('auth-password');
+    if(pwInput){
+      pwInput.onkeydown = (e) => {
+        if(e.key === 'Enter') btnSubmit.click();
+      };
+    }
+    if(emailInput){
+      setTimeout(() => emailInput.focus(), 80);
+    }
 
     modal.hidden = false;
   }
