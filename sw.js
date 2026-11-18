@@ -1,8 +1,9 @@
-const CACHE_NAME = 'calcolo-mente-v2';
+const CACHE_NAME = 'calcolo-mente-v3';
 
 const STATIC_ASSETS = [
   './',
   './index.html',
+  './calcolo.html',
   './db-sync.js',
   './manifest.webmanifest',
   './favicon.svg',

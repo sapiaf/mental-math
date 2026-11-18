@@ -6,6 +6,23 @@ Include tracciamento dei calcoli più difficili tramite mediana dei tempi di ris
 
 È strutturato come **Progressive Web App (PWA)**: funziona al 100% offline, può essere installata come un'app nativa su iPhone/Android/Desktop, e include strumenti di backup/esportazione JSON e CSV.
 
+## Allenamento quotidiano e ripasso
+
+- **Allenamento di oggi**: 4 minuti attivi in tre fasi, con una pausa tra le fasi: riscaldamento (1 min), ripasso (2 min), verifica mista (1 min). Usa il livello selezionato e fino a 12 calcoli in scadenza; se non ce ne sono, riprende i punti deboli o genera esercizi del livello. Si segna come completato dopo aver risolto almeno un calcolo in ogni fase.
+- **Ripasso a distanza**: dalla home puoi avviare anche solo il ripasso da 2 minuti. Dopo risposte corrette sotto i 2 secondi mediani, gli intervalli progrediscono a 1, 3, 7, 14 e 30 giorni, solo quando il ripasso precedente è scaduto. Ripetere prima della scadenza non la rimanda e non allunga l’intervallo. Una risposta lenta riporta l’intervallo a 1 giorno; un errore ripropone il calcolo dopo 10 minuti.
+- **Padronanza confermata**: richiede almeno 5 risposte nei round normali o nelle verifiche finali quotidiane, distribuite su almeno 2 giorni. Per ogni calcolo si conservano le ultime 5 verifiche (una osservazione per sessione, con mediana dei tempi e numero di risposte); la mediana delle verifiche deve essere sotto 1,2 secondi, senza errori nelle verifiche considerate e negli ultimi 5 tentativi. Una verifica deve contenere almeno 2 calcoli distinti. I drill ripetitivi non creano prove di padronanza.
+- Gli **errori recenti**, negli ultimi 5 tentativi, determinano la priorità dei calcoli difficili e il bordo rosso nella matrice. Gli errori totali restano disponibili nei dettagli e nei backup. Anche un errore su un calcolo non ancora risolto viene conservato.
+
+Lo storico e i backup precedenti restano leggibili. I tempi e gli errori storici sono conservati; non vengono inventati risultati recenti o verifiche per i vecchi dati. I calcoli precedenti diventano ripassabili un giorno dopo l’ultima risposta registrata. Scadenze e verifiche vengono salvate insieme ai calcoli, nello stesso localStorage e nel cloud esistente, senza modifiche alla tabella Supabase. Le sessioni quotidiane e i ripassi non modificano gli obiettivi dei round normali da 2 minuti.
+
+### Verifica locale
+
+I test non richiedono dipendenze aggiuntive:
+
+```bash
+node --test tests/training.test.cjs
+```
+
 ---
 
 ## 📁 Struttura del Progetto
@@ -22,7 +39,9 @@ mental-math/
 │   ├── icon-192.png        # Icona Android / PWA standard (192x192)
 │   ├── icon-512.png        # Icona PWA splash screen & store (512x512)
 │   └── apple-touch-icon.png# Icona per iOS Home Screen (180x180)
+├── db-sync.js              # Autenticazione e sincronizzazione Supabase
 ├── db-adapter.example.js   # Esempio per collegare un database cloud (Supabase/Firebase)
+├── tests/training.test.cjs # Verifiche di padronanza, ripasso e selezione esercizi
 └── README.md               # Documentazione del progetto
 ```
 
@@ -94,7 +113,7 @@ Una volta pubblicata su HTTPS (ad es. GitHub Pages):
 Tutti i dati risiedono nel browser sotto la chiave `localStorage['calcolo-a-mente.v1']`.
 
 ### Struttura dati:
-- **`facts`**: memorizza ogni calcolo incontrato (es. `k7x8`), quante volte è uscito e gli ultimi tempi di risposta per calcolare la mediana delle debolezze.
+- **`facts`**: memorizza ogni calcolo incontrato (es. `k7x8`), quante volte è uscito, gli ultimi tempi di risposta, gli errori storici e recenti, le verifiche miste e la scadenza del ripasso. Il formato mantiene il prefisso precedente e aggiunge i nuovi metadati in coda.
 - **`history`**: elenco di tutti i round svolti (data, livello, punteggio, durata in secondi).
 - **`settings`**: livello attuale, durata selezionata, intervalli personalizzati, filtro operazioni.
 

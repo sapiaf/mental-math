@@ -101,6 +101,9 @@
     .prog{display:flex;flex-direction:column;gap:10px}
     .pcard{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:10px}
     .pcard .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+    .daily-card{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+    .daily-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none;font-size:12px;color:var(--muted)}
+    .daily-steps b{display:block;color:var(--ink);font-size:13px}
     .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
     .stats div{display:flex;flex-direction:column}
     .stats b{font-family:var(--mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -191,6 +194,18 @@
 
   <!-- TAB 1: ALLENA -->
   <section id="v-train">
+    <div class="pcard daily-card">
+      <div class="top"><h2>Allenamento di oggi</h2><span class="pill go" id="daily-badge">4 min</span></div>
+      <p class="hint" id="daily-status" aria-live="polite"></p>
+      <ol class="daily-steps">
+        <li><b>1. Riscaldamento</b>1 minuto</li>
+        <li><b>2. Ripasso</b>2 minuti</li>
+        <li><b>3. Verifica mista</b>1 minuto</li>
+      </ol>
+      <button class="btn primary wide" id="start-daily">Inizia l’allenamento di oggi</button>
+      <button class="btn wide" id="start-review" hidden>Ripassa i calcoli in scadenza</button>
+      <p class="hint" id="review-next"></p>
+    </div>
     <div class="row" style="justify-content:space-between;align-items:center">
       <p class="hint" style="margin:0">Scegli il livello e fai round a tempo. Si passa al successivo appena rispondi correttamente.</p>
     </div>
@@ -312,7 +327,7 @@
 
   <!-- TAB 3: MATRICE / HEATMAP TABELLINE -->
   <section id="v-matrix" hidden>
-    <p class="hint">Mappa visiva della velocità di recupero. Verde = automatizzato (&lt;1.2s), Giallo = calcolato (&lt;2.0s), Arancione/Rosso = blocco (&gt;2.0s o errori frequenti). Tocca una casella per i dettagli o un'intestazione per allenare l'intera riga.</p>
+    <p class="hint">Velocità delle ultime 5 risposte. Verde scuro = padronanza confermata in verifiche miste su più giorni; il bordo rosso indica errori recenti. Tocca una casella per i dettagli o un'intestazione per allenare l'intera riga.</p>
 
     <div class="row" style="justify-content:space-between">
       <div class="seg" id="mat-op">
@@ -330,7 +345,7 @@
       <div class="stats">
         <div><b id="mat-mastery">0%</b><span>Padronanza (&lt;1.2s)</span></div>
         <div><b id="mat-median">–</b><span>Mediana matrice</span></div>
-        <div><b id="mat-errors">0</b><span>Errori registrati</span></div>
+        <div><b id="mat-errors">0</b><span>Errori recenti</span></div>
       </div>
     </div>
 
@@ -341,8 +356,8 @@
 
     <!-- Legenda -->
     <div class="row" style="font-size:12px;color:var(--muted);justify-content:center;gap:12px">
-      <span class="leg-item"><i class="leg-box m-fast"></i> &lt;1.2s</span>
-      <span class="leg-item"><i class="leg-box m-good"></i> 1.2–2.0s</span>
+      <span class="leg-item"><i class="leg-box m-fast"></i> Padronanza confermata</span>
+      <span class="leg-item"><i class="leg-box m-good"></i> &lt;2.0s · da confermare</span>
       <span class="leg-item"><i class="leg-box m-med"></i> 2.0–2.8s</span>
       <span class="leg-item"><i class="leg-box m-slow"></i> &gt;2.8s</span>
       <span class="leg-item"><i class="leg-box m-unseen"></i> Non visto</span>
@@ -366,7 +381,7 @@
 
   <!-- TAB 4: DIFFICILI -->
   <section id="v-hard" hidden>
-    <p class="hint">I calcoli su cui sei più lento o commetti errori, misurati come mediana delle ultime 5 volte che li hai incontrati. Un calcolo sbagliato pesa di più, perché resti fermo finché non lo correggi.</p>
+    <p class="hint">I calcoli più difficili, ordinati per mediana delle ultime 5 risposte ed errori negli ultimi 5 tentativi. Gli errori storici restano nei dettagli, ma non ti penalizzano per sempre.</p>
     <div class="seg" id="opfilter">
       <button data-o="all" aria-pressed="true">Tutti</button>
       <button data-o="p" aria-pressed="false">+</button>
@@ -393,9 +408,9 @@
         <h2>Target di Padronanza (&lt;1.2s)</h2>
         <span class="pill ok">Automatismo</span>
       </div>
-      <p class="hint">Un calcolo è considerato pienamente masterato quando il tempo mediano di recupero scende stabilmente sotto 1.2 secondi con zero errori (recupero spontaneo da memoria a lungo termine).</p>
+      <p class="hint">La padronanza richiede almeno 5 risposte in verifiche miste su 2 giorni diversi, mediana sotto 1,2 s e nessun errore recente. Contano i round normali e la verifica finale dell’allenamento di oggi; i drill preparano alla verifica. Gli errori passati restano nello storico.</p>
       <div class="stats">
-        <div><b id="stat-mastered-count">0</b><span>Masterati (&lt;1.2s)</span></div>
+        <div><b id="stat-mastered-count">0</b><span>Padroneggiati</span></div>
         <div><b id="stat-seen-count">0</b><span>Calcoli visti</span></div>
         <div><b id="stat-mastered-pct">0%</b><span>Tasso padronanza</span></div>
       </div>
@@ -577,16 +592,80 @@ function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(state))}catch(e)
 let refs=null,writing=Promise.resolve();
 function setSync(t){$('sync').textContent=t}
 
+/* ---------- learning core (shared by all training modes) ---------- */
+const DAY_MS=86400000;
+const REVIEW_DAYS=[1,3,7,14,30];
+function dayOf(t){const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function median(a){if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
 function parseFact(v){
   const parts = String(v).split('|');
   const n = +parts[0] || 0;
   const last = +parts[1] || 0;
   const times = parts[2] ? parts[2].split(',').map(Number).filter(x => !isNaN(x) && x > 0) : [];
   const err = +parts[3] || 0;
-  return { n, last, times, err };
+  let extra={};
+  try{extra=JSON.parse(parts[4]||'{}')||{}}catch(e){}
+  return { n, last, times, err,
+    recent:Array.isArray(extra.recent)?extra.recent.slice(-5):[],
+    checks:Array.isArray(extra.checks)?extra.checks.slice(-5):[],
+    review:extra.review&&Number.isFinite(extra.review.due)?extra.review:null
+  };
 }
 function packFact(f){
-  return f.n + '|' + f.last + '|' + f.times.join(',') + '|' + (f.err || 0);
+  // Keep the legacy prefix readable by older backups and adapters.
+  return f.n+'|'+f.last+'|'+f.times.join(',')+'|'+(f.err||0)+'|'+JSON.stringify({recent:f.recent,checks:f.checks,review:f.review});
+}
+function factStats(f){
+  const checks=f.checks||[], recent=f.recent||[];
+  const errors=recent.reduce((s,r)=>s+(r.err||0),0);
+  const count=checks.reduce((s,c)=>s+c.count,0);
+  const days=new Set(checks.map(c=>c.day)).size;
+  const med=median(f.times.slice(-5));
+  const mastered=count>=5&&days>=2&&checks.every(c=>!c.err)&&median(checks.map(c=>c.ms))<1200&&errors===0;
+  return {med,errors,count,days,mastered};
+}
+function recordFact(f,results,{now,session,verify=false,partial=false}){
+  const solved=results.filter(r=>r.completed!==false);
+  const errors=results.reduce((s,r)=>s+(r.err||0),0);
+  f.recent=f.recent||[];f.checks=f.checks||[];
+  for(const r of results){
+    if(r.completed!==false){f.n++;f.times.push(r.ms)}
+    f.err+=(r.err||0);
+    f.recent.push({err:r.err||0});
+  }
+  f.times=f.times.slice(-6);f.recent=f.recent.slice(-5);f.last=now;
+  // One observation per session prevents a repeated drill from manufacturing mastery.
+  if(verify&&!partial&&solved.length){
+    f.checks.push({ms:median(solved.map(r=>r.ms)),err:errors,count:solved.length,day:dayOf(now),t:now,session});
+    f.checks=f.checks.slice(-5);
+  }
+  const failed=errors>0||solved.length!==results.length;
+  if(failed){
+    f.review={days:0,due:now+10*60000,at:now};
+  }else if(!partial&&solved.length){
+    const old=f.review;
+    const slow=median(solved.map(r=>r.ms))>=2000;
+    let days=1;
+    if(!slow&&old&&old.days>0){
+      const advance=now>=old.due;
+      days=advance?(REVIEW_DAYS.find(d=>d>old.days)||30):old.days;
+    }
+    // Repeating early neither advances the interval nor postpones a scheduled review.
+    const due=old&&old.days===days&&old.due>now?old.due:now+days*DAY_MS;
+    f.review={days,due,at:now};
+  }
+  return f;
+}
+function reviewQueue(facts,now=Date.now()){
+  const queue=[];
+  for(const key in facts){
+    if(!/^k\d+[pmxd]\d+$/.test(key))continue;
+    const f=parseFact(facts[key]);
+    if(!f.n&&!f.recent.length)continue;
+    const stats=factStats(f),due=f.review?f.review.due:f.last+DAY_MS;
+    if(due<=now)queue.push({key,due,med:stats.med||2500,err:stats.errors});
+  }
+  return queue.sort((a,b)=>b.err-a.err||a.due-b.due||a.key.localeCompare(b.key));
 }
 function mergeFacts(a,b){
   const out=Object.assign({},a);
@@ -595,16 +674,21 @@ function mergeFacts(a,b){
       out[k]=b[k];
     } else {
       const fa=parseFact(out[k]), fb=parseFact(b[k]);
-      if(fb.n > fa.n){
-        out[k]=b[k];
-      } else {
-        fa.err = Math.max(fa.err, fb.err);
-        out[k]=packFact(fa);
-      }
+      const winner=fb.n>fa.n||(fb.n===fa.n&&fb.last>fa.last)?fb:fa;
+      winner.err=Math.max(fa.err,fb.err);
+      const checks=new Map();
+      fa.checks.concat(fb.checks).forEach(c=>checks.set(c.session,c));
+      winner.checks=[...checks.values()].sort((x,y)=>x.t-y.t).slice(-5);
+      const latest=fb.last>fa.last?fb:fa;
+      winner.recent=latest.recent;
+      const reviews=[fa.review,fb.review].filter(Boolean).sort((x,y)=>y.at-x.at);
+      winner.review=reviews[0]||null;
+      out[k]=packFact(winner);
     }
   }
   return out;
 }
+/* ---------- database sync ---------- */
 function mergeHist(a,b){const m=new Map();a.concat(b).forEach(h=>m.set(h.t,h));return [...m.values()].sort((x,y)=>x.t-y.t)}
 function prune(){
   const keys=Object.keys(state.facts);
@@ -658,8 +742,7 @@ async function initDb(){
 /* ---------- helpers matematici e formatting ---------- */
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const sec=ms=>(ms/1000).toFixed(1).replace('.',',')+' s';
-const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-function median(a){if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
+const today=()=>dayOf(Date.now());
 function levelById(id){return LEVELS.find(l=>l.id===id)||LEVELS[1]}
 function cfgOf(l){return l.id==='c'?state.settings.custom:l.cfg}
 function mk(op,x,y){
@@ -756,7 +839,8 @@ function hardList(filter){
     if(!f.times.length)continue;
     const op=/[pmxd]/.exec(k.slice(1))[0];
     if(filter&&filter!=='all'&&op!==filter)continue;
-    out.push({key:k,op,n:f.n,med:median(f.times.slice(-5)),err:f.err||0});
+    const stats=factStats(f);
+    out.push({key:k,op,n:f.n,med:stats.med,err:stats.errors,totalErr:f.err||0});
   }
   return out.sort((a,b)=>(b.med + (b.err * 300)) - (a.med + (a.err * 300)));
 }
@@ -809,6 +893,26 @@ function readCustom(){
   c.add=v.slice(0,4);c.mul=v.slice(4);saveLocal();renderLevels();
 }
 
+/* ---------- daily training and spaced review ---------- */
+function renderDaily(){
+  const now=Date.now(),queue=reviewQueue(state.facts,now);
+  const done=state.history.some(h=>h.d===today()&&h.dailyDone);
+  $('daily-badge').textContent=done?'Completato ✓':'4 min';
+  $('daily-badge').className='pill '+(done?'ok':'go');
+  $('start-daily').textContent=done?'Fai un altro allenamento':'Inizia l’allenamento di oggi';
+  $('daily-status').textContent=queue.length
+    ? queue.length+' calcoli da ripassare: oggi alterniamo recupero e verifica mista.'
+    : 'Una sessione guidata al livello selezionato, con ripasso dei tuoi punti deboli.';
+  $('start-review').hidden=!queue.length;
+  $('start-review').textContent='Solo ripasso · '+queue.length+' in scadenza (2 min)';
+  const nextDue=Object.values(state.facts).map(parseFact).filter(f=>f.n||f.recent.length)
+    .map(f=>f.review?f.review.due:f.last+DAY_MS).filter(t=>t>now).sort((a,b)=>a-b)[0];
+  $('review-next').textContent=queue.length
+    ? 'Ripassi progressivi a 1, 3, 7, 14 e 30 giorni; dopo un errore, il calcolo torna tra 10 minuti.'
+    : nextDue?'Prossimo ripasso: '+new Date(nextDue).toLocaleString('it-IT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'.'
+    : 'I primi calcoli che risolvi entreranno automaticamente nel ripasso.';
+}
+
 /* ---------- render difficili ---------- */
 function renderHard(){
   const f=state.settings.filter,list=hardList(f),box=$('hardlist');
@@ -821,7 +925,7 @@ function renderHard(){
   const top=list.slice(0,40),max=top[0].med||1;
   box.innerHTML='<div class="list">'+top.map(it=>{
     const txt=keyText(it.key);
-    const errBadge=it.err>0?`<span class="pill bad" style="margin-left:6px;font-size:10px">${it.err} ${it.err===1?'errore':'errori'}</span>`:'';
+    const errBadge=it.err>0?`<span class="pill bad" style="margin-left:6px;font-size:10px">${it.err} ${it.err===1?'errore recente':'errori recenti'}</span>`:'';
     return '<div class="item"><span class="q">'+txt+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(it.med/max*100))+'%"></i></span><span class="v">'+sec(it.med)+errBadge+'<small>'+it.n+(it.n===1?' volta':' volte')+'</small></span></div>';
   }).join('')+'</div>';
 }
@@ -845,6 +949,7 @@ function renderMatrix(){
   let totalSeen = 0;
   let totalErrors = 0;
   const allMedians = [];
+  const countedErrors = new Set();
   const cellsToRender = [];
 
   // Top-left corner
@@ -876,14 +981,16 @@ function renderMatrix(){
       const fact = factRaw ? parseFact(factRaw) : null;
       let med = 0, err = 0, cls = 'm-unseen';
 
-      if(fact && fact.times.length){
-        med = median(fact.times.slice(-5));
-        err = fact.err || 0;
+      if(fact && (fact.times.length||fact.recent.length)){
+        const stats=factStats(fact);
+        med = stats.med;
+        err = stats.errors;
         totalSeen++;
-        totalErrors += err;
-        allMedians.push(med);
+        if(!countedErrors.has(item.key)){totalErrors+=err;countedErrors.add(item.key)}
+        if(med)allMedians.push(med);
 
-        if(med < 1200 && err === 0){ cls = 'm-fast'; totalMastered++; }
+        if(stats.mastered){ cls = 'm-fast'; totalMastered++; }
+        else if(!med){ cls = 'm-slow'; }
         else if(med < 2000){ cls = 'm-good'; }
         else if(med < 2800){ cls = 'm-med'; }
         else { cls = 'm-slow'; }
@@ -918,7 +1025,7 @@ function renderMatrix(){
     btnWeak.textContent = `Allena le ${weakCount} caselle arancioni/rosse (2 min)`;
     btnWeak.disabled = false;
   } else {
-    btnWeak.textContent = `Nessun punto critico: tutte le tabelline sono veloci! 🎉`;
+    btnWeak.textContent = totalSeen?`Nessun punto critico tra i calcoli già visti`:`Gioca un round per trovare i calcoli da allenare`;
     btnWeak.disabled = true;
   }
 }
@@ -935,21 +1042,21 @@ function selectMatrixCell(r, c, op, ans, fact, med, err){
   
   const pill = $('mat-drill-pill');
   if(!med){
-    pill.textContent = 'Non ancora visto';
-    pill.className = 'pill mut';
-  } else if(med < 1200 && !err){
+    pill.textContent = err?'Errori da recuperare':'Non ancora visto';
+    pill.className = 'pill '+(err?'bad':'mut');
+  } else if(factStats(fact).mastered){
     pill.textContent = sec(med) + ' · Automatizzato';
     pill.className = 'pill ok';
   } else if(med < 2000){
-    pill.textContent = sec(med) + ' · Buono';
+    pill.textContent = sec(med) + (med<1200?' · Da confermare':' · Buono');
     pill.className = 'pill go';
   } else {
     pill.textContent = sec(med) + ' · Da velocizzare';
     pill.className = 'pill bad';
   }
 
-  $('mat-drill-desc').textContent = fact && fact.n 
-    ? `Completato ${fact.n} volte · ${err} errori registrati` 
+  $('mat-drill-desc').textContent = fact && (fact.n||fact.recent.length)
+    ? `Completato ${fact.n} volte · ${err} errori recenti · ${fact.err} totali. Verifiche miste: ${factStats(fact).count} risposte su ${factStats(fact).days} giorni.`
     : 'Nessun tentativo registrato finora. Allenalo per fissarlo nella memoria.';
 
   $('mat-drill-btn').textContent = `Allena ${r} ${SYM[op]} ${c} (1 min)`;
@@ -996,14 +1103,14 @@ $('mat-drill-weak').onclick = () => {
     for(let c = 2; c <= range; c++){
       const k = mk(op, r, c).key;
       const f = state.facts[k] ? parseFact(state.facts[k]) : null;
-      if(f && f.times.length){
+      if(f && (f.times.length||f.recent.length)){
         const med = median(f.times.slice(-5));
-        if(med >= 2000 || f.err > 0) weakKeys.push(k);
+        if(med >= 2000 || factStats(f).errors > 0) weakKeys.push(k);
       }
     }
   }
   if(weakKeys.length){
-    startTargetedDrill(weakKeys, 'Caselle critiche matrice', 120);
+    startTargetedDrill([...new Set(weakKeys)], 'Caselle critiche matrice', 120);
   }
 };
 
@@ -1021,9 +1128,9 @@ function renderProg(){
   let masteredCount = 0, seenCount = 0;
   for(const k in state.facts){
     const f = parseFact(state.facts[k]);
-    if(f.times.length){
+    if(f.times.length||f.recent.length){
       seenCount++;
-      if(median(f.times.slice(-5)) < 1200 && (f.err || 0) === 0){
+      if(factStats(f).mastered){
         masteredCount++;
       }
     }
@@ -1049,7 +1156,7 @@ function renderProg(){
   }).join('');
 }
 
-function renderAll(){renderLevels();renderCustom();renderMatrix();renderHard();renderProg()}
+function renderAll(){renderLevels();renderCustom();renderDaily();renderMatrix();renderHard();renderProg()}
 
 /* ---------- tabs & controlli ---------- */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
@@ -1066,6 +1173,11 @@ document.querySelectorAll('#opfilter button').forEach(b=>b.onclick=()=>{state.se
 ['plus','minus','times','div'].concat(CF).forEach(f=>$('c-'+f).addEventListener('change',readCustom));
 $('start').onclick=()=>startGame('n');
 $('start-hard').onclick=()=>startGame('h');
+$('start-daily').onclick=startDaily;
+$('start-review').onclick=startReview;
+// Refresh deadlines after returning to the app or crossing a review deadline.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderDaily()});
+setInterval(()=>{if(!document.hidden)renderDaily()},60000);
 
 /* Toggles Suono e Vibrazione */
 function syncFeedbackBtns(){
@@ -1123,7 +1235,7 @@ $('copy').onclick=async()=>{
 $('csv').onclick=()=>{
   const l=hardList(state.settings.filter);
   if(!l.length){toast('Elenco vuoto: gioca prima un round');return}
-  const csv='calcolo;operazione;mediana_secondi;volte;errori\n'+l.map(it=>keyText(it.key)+';'+SYM[it.op]+';'+(it.med/1000).toFixed(2).replace('.',',')+';'+it.n+';'+(it.err||0)).join('\n');
+  const csv='calcolo;operazione;mediana_secondi;volte;errori_recenti;errori_storici\n'+l.map(it=>keyText(it.key)+';'+SYM[it.op]+';'+(it.med/1000).toFixed(2).replace('.',',')+';'+it.n+';'+it.err+';'+it.totalErr).join('\n');
   downloadFile('calcoli-lenti.csv', csv, 'text/csv;charset=utf-8');
   toast('CSV calcoli lenti scaricato');
 };
@@ -1132,7 +1244,7 @@ $('csv').onclick=()=>{
 $('btn-export-json').onclick=()=>{
   const backup={
     app:'calcolo-a-mente',
-    version:1,
+    version:2,
     exportedAt:new Date().toISOString(),
     facts:state.facts,
     history:state.history,
@@ -1182,8 +1294,8 @@ $('btn-export-rounds-csv').onclick=()=>{
   const rows=state.history.map(h=>{
     const d=new Date(h.t);
     const timeStr=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    const lvlStr=h.l==='c'?'Personalizzato':('Livello '+h.l);
-    const modeStr=h.m==='n'?'Normale':h.m==='h'?'Difficili':h.m==='trick'?'Trucchi':'Drill';
+    const lvlStr=h.l==='c'?'Personalizzato':h.l==='drill'?'Mirato':h.l==='trick'?'Tecnica':('Livello '+h.l);
+    const modeStr=h.m==='n'?'Normale':h.m==='h'?'Difficili':h.m==='trick'?'Trucchi':h.m==='daily'?'Oggi: '+h.phase:h.m==='review'?'Ripasso':'Drill';
     const opm=((h.s / (h.dur || 120)) * 60).toFixed(1);
     return [h.d, timeStr, lvlStr, modeStr, h.s, opm, (h.err||0), h.dur].join(';');
   }).join('\n');
@@ -1209,6 +1321,25 @@ $('btn-reset-data').onclick=()=>{
 
 /* ---------- logica di gioco (round normale, drill e trucchi) ---------- */
 let G=null,raf=0;
+const DAILY_PHASES=[
+  {id:'warmup',title:'Riscaldamento',dur:60},
+  {id:'review',title:'Ripasso',dur:120},
+  {id:'check',title:'Verifica mista',dur:60}
+];
+function beginRound(options){
+  cancelAnimationFrame(raf);
+  const now=performance.now();
+  G=Object.assign({
+    score:0,totalErrors:0,curErrors:0,log:[],cur:null,shown:0,input:'',
+    pool:null,lastKey:null,done:false,session:Date.now()+'-'+Math.random().toString(36).slice(2)
+  },options,{end:now+options.dur*1000});
+  $('glabel').textContent=G.label;
+  $('gscore').textContent='0';$('gtime').textContent=G.dur;
+  $('gpace').textContent='0.0 op/m';
+  $('play').hidden=false;$('result').hidden=true;$('game').hidden=false;
+  document.body.style.overflow='hidden';
+  next();tick();
+}
 function startGame(mode){
   const lvl=levelById(state.settings.level),cfg=cfgOf(lvl);
   if(!['plus','minus','times','div'].some(o=>cfg[o])){toast('Scegli almeno un\'operazione');return}
@@ -1217,99 +1348,50 @@ function startGame(mode){
     pool=hardList('all').slice(0,20);
     if(pool.length<4){toast('Servono più dati: gioca qualche round normale');return}
   }
-  const dur=state.settings.dur,now=performance.now();
-  G={
-    mode,
-    level:lvl.id,
-    cfg,
-    dur,
-    end:now+dur*1000,
-    score:0,
-    totalErrors:0,
-    curErrors:0,
-    log:[],
-    cur:null,
-    shown:0,
-    input:'',
-    pool,
-    lastKey:null,
-    done:false
-  };
-  $('glabel').textContent=mode==='h'?'Le più lente':(lvl.id==='c'?'Personalizzato':'Livello '+lvl.id);
-  $('gscore').textContent='0';
-  $('gpace').textContent='0.0 op/m';
-  $('play').hidden=false;$('result').hidden=true;$('game').hidden=false;
-  document.body.style.overflow='hidden';
-  next();tick();
+  beginRound({mode,level:lvl.id,cfg,dur:state.settings.dur,pool,
+    label:mode==='h'?'Le più lente':(lvl.id==='c'?'Personalizzato':'Livello '+lvl.id)});
 }
 
 function startTargetedDrill(keys, label, dur=60){
-  const now=performance.now();
-  const pool=keys.map(k=>{
+  const pool=[...new Set(keys)].map(k=>{
     const f=state.facts[k]?parseFact(state.facts[k]):null;
     return{key:k,med:f&&f.times.length?median(f.times.slice(-5)):2500};
   });
-  G={
-    mode:'drill',
-    level:'drill',
-    cfg:null,
-    dur,
-    end:now+dur*1000,
-    score:0,
-    totalErrors:0,
-    curErrors:0,
-    log:[],
-    cur:null,
-    shown:0,
-    input:'',
-    pool,
-    label,
-    lastKey:null,
-    done:false
-  };
-  $('glabel').textContent=label;
-  $('gscore').textContent='0';
-  $('gpace').textContent='0.0 op/m';
-  $('play').hidden=false;$('result').hidden=true;$('game').hidden=false;
-  document.body.style.overflow='hidden';
-  next();tick();
+  if(!pool.length)return;
+  beginRound({mode:'drill',level:'drill',cfg:null,dur,pool,label});
 }
 
 function startTrickDrill(trickId, label, dur=60){
-  const now=performance.now();
-  G={
-    mode:'trick',
-    trickId,
-    level:'trick',
-    cfg:null,
-    dur,
-    end:now+dur*1000,
-    score:0,
-    totalErrors:0,
-    curErrors:0,
-    log:[],
-    cur:null,
-    shown:0,
-    input:'',
-    pool:null,
-    label,
-    lastKey:null,
-    done:false
-  };
-  $('glabel').textContent=label;
-  $('gscore').textContent='0';
-  $('gpace').textContent='0.0 op/m';
-  $('play').hidden=false;$('result').hidden=true;$('game').hidden=false;
-  document.body.style.overflow='hidden';
-  next();tick();
+  beginRound({mode:'trick',trickId,level:'trick',cfg:null,dur,label});
+}
+
+function startReview(){
+  const pool=reviewQueue(state.facts).slice(0,20);
+  if(!pool.length){renderDaily();toast('Nessun calcolo in scadenza: puoi fare l’allenamento di oggi');return}
+  const lvl=levelById(state.settings.level);
+  beginRound({mode:'review',level:lvl.id,cfg:cfgOf(lvl),dur:120,pool,label:'Ripasso a distanza'});
+}
+function startDaily(){
+  const lvl=levelById(state.settings.level),cfg=cfgOf(lvl);
+  if(!['plus','minus','times','div'].some(o=>cfg[o])){toast('Scegli almeno un’operazione');return}
+  const due=reviewQueue(state.facts).slice(0,12);
+  const daily={id:Date.now()+'-'+Math.random().toString(36).slice(2),level:lvl.id,
+    cfg:JSON.parse(JSON.stringify(cfg)),pool:due.length?due:hardList('all').slice(0,12),rounds:[]};
+  startDailyPhase(daily,0);
+}
+function startDailyPhase(daily,index){
+  const phase=DAILY_PHASES[index];
+  beginRound({mode:'daily',level:daily.level,cfg:daily.cfg,dur:phase.dur,
+    pool:phase.id==='warmup'?null:daily.pool,daily,phase:phase.id,phaseIndex:index,
+    label:(index+1)+'/3 · '+phase.title});
 }
 
 function pickFromPool(pool){
   if(pool.length===1) return fromKey(pool[0].key);
-  const tot=pool.reduce((s,p)=>s+p.med,0);
+  const tot=pool.reduce((s,p)=>s+Math.max(1,p.med),0);
   let r=Math.random()*tot;
   for(const p of pool){
-    r-=p.med;
+    r-=Math.max(1,p.med);
     if(r<=0) return fromKey(p.key);
   }
   return fromKey(pool[0].key);
@@ -1319,8 +1401,12 @@ function next(){
   let p,tries=0;
   do{
     if(G.mode==='trick') p=genTrickProblem(G.trickId);
-    else if(G.mode==='drill') p=pickFromPool(G.pool);
-    else p=(G.pool&&Math.random()<.8)?pickFromPool(G.pool):gen(G.cfg);
+    else if(G.mode==='drill'||G.mode==='review') p=pickFromPool(G.pool);
+    else if(G.mode==='daily'&&G.pool&&G.pool.length){
+      const usePool=G.phase==='review'||(G.phase==='check'&&Math.random()<.5);
+      p=usePool?pickFromPool(G.pool):gen(G.cfg);
+    }
+    else p=(G.pool&&G.pool.length&&Math.random()<.8)?pickFromPool(G.pool):gen(G.cfg);
     tries++;
   }while(p.key===G.lastKey&&tries<6);
 
@@ -1332,6 +1418,7 @@ function drawAnswer(bad){const a=$('answer');a.textContent=G.input;a.classList.t
 
 function press(k){
   if(!G||G.done)return;
+  if(performance.now()>=G.end){finish();return}
   if(k==='del')G.input=G.input.slice(0,-1);
   else if(k==='clr')G.input='';
   else if(G.input.length<6)G.input+=k;
@@ -1343,7 +1430,7 @@ function press(k){
       key:G.cur.key,
       text:G.cur.text,
       op:G.cur.op,
-      ms:Math.round(performance.now()-G.shown),
+      ms:Math.max(1,Math.round(performance.now()-G.shown)),
       err:G.curErrors||0
     });
     G.score++;
@@ -1391,20 +1478,27 @@ function tick(){
 }
 
 function finish(partial){
+  if(!G||G.done)return;
   G.done=true;cancelAnimationFrame(raf);
   if(!partial) playBeep('finish');
   const now=Date.now();
-  G.log.forEach(r=>{
-    const f=state.facts[r.key]?parseFact(state.facts[r.key]):{n:0,last:0,times:[],err:0};
-    f.n++;
-    f.last=now;
-    f.times.push(r.ms);
-    f.times=f.times.slice(-6);
-    f.err=(f.err||0)+(r.err||0);
-    state.facts[r.key]=packFact(f);
+  const observations=G.log.slice();
+  const mixed=new Set(G.log.map(r=>r.key)).size>=2;
+  // Preserve errors on the unanswered problem as well as completed responses.
+  if(G.curErrors)observations.push({key:G.cur.key,err:G.curErrors,completed:false});
+  const byFact=new Map();
+  observations.forEach(r=>{if(!byFact.has(r.key))byFact.set(r.key,[]);byFact.get(r.key).push(r)});
+  byFact.forEach((results,key)=>{
+    const f=parseFact(state.facts[key]||'');
+    recordFact(f,results,{now,session:G.session,partial:!!partial,
+      verify:mixed&&(G.mode==='n'||(G.mode==='daily'&&G.phase==='check'))});
+    state.facts[key]=packFact(f);
   });
+  if(G.daily&&!partial){
+    G.daily.rounds.push({score:G.score,errors:G.totalErrors,dur:G.dur});
+  }
   if(G.log.length&&!partial){
-    state.history.push({
+    const entry={
       t:now,
       d:today(),
       l:G.level,
@@ -1412,9 +1506,14 @@ function finish(partial){
       s:G.score,
       dur:G.dur,
       err:G.totalErrors||0
-    });
+    };
+    if(G.daily){
+      entry.phase=G.phase;entry.dailyId=G.daily.id;
+      entry.dailyDone=G.phase==='check'&&G.daily.rounds.length===3&&G.daily.rounds.every(r=>r.score>0);
+    }
+    state.history.push(entry);
   }
-  prune();saveLocal();if(G.log.length)pushDb();renderAll();
+  prune();saveLocal();if(observations.length)pushDb();renderAll();
   if(partial)closeGame();else showResult();
 }
 
@@ -1463,11 +1562,18 @@ function showResult(){
   }else if(G.mode==='h'){
     verdict='Round sulle più lente. Continua finché i tempi non si avvicinano agli altri calcoli.';
   }else if(G.mode==='trick'||G.mode==='drill'){
-    verdict='Sessione completata su: '+G.label+'. Continua ad allenarla per fissare il metodo e scendere sotto 1.2 secondi!';
+    verdict='Sessione completata su: '+G.label+'. Per confermare la padronanza, ritrova questi calcoli in un round normale o nella verifica mista di oggi.';
+  }else if(G.mode==='review'){
+    verdict='Ripasso completato. Le prossime scadenze tengono conto di velocità ed errori di questa sessione.';
+  }else if(G.mode==='daily'){
+    verdict=G.phase==='warmup'?'Riscaldamento concluso. Ora ripassiamo i calcoli in scadenza o i tuoi punti deboli.':
+      G.phase==='review'?'Ripasso concluso. L’ultima fase mescola questi calcoli con altri esercizi del tuo livello.':
+      G.daily.rounds.every(r=>r.score>0)?'Allenamento di oggi completato! La verifica mista contribuisce a confermare la padronanza.':
+      'Sessione conclusa. Per completare l’allenamento di oggi, risolvi almeno un calcolo in ognuna delle tre fasi.';
   }
 
   const fastBadge = fastMasteredCount > 0 
-    ? `<span class="pill ok" style="font-size:13px;padding:3px 10px">⚡ ${fastMasteredCount} masterati (&lt;1.2s)</span>` 
+    ? `<span class="pill ok" style="font-size:13px;padding:3px 10px">⚡ ${fastMasteredCount} risposte rapide (&lt;1,2s)</span>`
     : '';
 
   res.innerHTML='<div>'+
@@ -1489,10 +1595,25 @@ function showResult(){
     '<button class="btn primary wide" id="again">Un altro round</button><div class="row"><button class="btn" id="tohard">Allena le più lente</button><button class="btn" id="close">Chiudi</button></div>';
 
   $('play').hidden=true;res.hidden=false;
+  if(G.daily){
+    const daily=G.daily,index=G.phaseIndex;
+    $('again').textContent=index<2?'Continua · '+DAILY_PHASES[index+1].title:'Ripeti l’allenamento';
+    $('again').onclick=()=>index<2?startDailyPhase(daily,index+1):startDaily();
+    $('tohard').hidden=true;
+    if(index===2){
+      const totals=daily.rounds.reduce((s,r)=>({score:s.score+r.score,errors:s.errors+r.errors}),{score:0,errors:0});
+      const summary=document.createElement('p');summary.className='hint';
+      summary.textContent='Totale delle 3 fasi: '+totals.score+' calcoli risolti · '+totals.errors+' errori · 4 minuti.';
+      res.insertBefore(summary,$('again'));
+    }
+    $('close').textContent='Torna alla home';$('close').onclick=closeGame;
+    return;
+  }
   const currentMode=G.mode, currentLabel=G.label, currentPool=G.pool, currentDur=G.dur, currentTrick=G.trickId;
   $('again').onclick=()=>{
     if(currentMode==='trick') startTrickDrill(currentTrick, currentLabel, currentDur);
     else if(currentMode==='drill') startTargetedDrill(currentPool.map(p=>p.key), currentLabel, currentDur);
+    else if(currentMode==='review') startReview();
     else startGame(currentMode);
   };
   $('tohard').onclick=()=>startGame('h');
@@ -1500,7 +1621,7 @@ function showResult(){
 }
 
 function closeGame(){if(G&&!G.done){G.done=true;cancelAnimationFrame(raf)}$('game').hidden=true;document.body.style.overflow='';G=null}
-$('quit').onclick=()=>{if(G&&!G.done&&G.log.length)finish(true);else closeGame()};
+$('quit').onclick=()=>{if(G&&!G.done&&(G.log.length||G.curErrors))finish(true);else closeGame()};
 
 /* ---------- pwa install prompt & service worker ---------- */
 if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
