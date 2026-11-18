@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Calcolo a mente - Allenatore</title>
-  <meta name="description" content="Allenatore di calcolo a mente veloce ispirato a Zetamac. Round a tempo, tracciamento delle debolezze e statistiche di progresso.">
+  <meta name="description" content="Allenatore di calcolo a mente veloce ispirato a Zetamac. Round a tempo, tracciamento errori, heatmap tabelline e statistiche di progresso.">
   <meta name="theme-color" content="#F1F2EC" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#111512" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,7 +37,7 @@
       --accent:#8196FF; --accent-ink:#0D1122; --slow:#FF8F55; --ok:#6BD37E; color-scheme:dark}
 
     body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
-    .wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+    .wrap{max-width:580px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .header-main{display:flex;flex-direction:column;gap:2px}
     h1{font-family:var(--display);font-weight:700;font-size:28px;letter-spacing:-.02em;margin:0;text-wrap:balance}
@@ -45,8 +45,8 @@
     .sync{font-size:12px;color:var(--muted)}
     button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
     button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-    .tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--soft);border-radius:12px;padding:4px;gap:4px}
-    .tabs button{border:0;background:transparent;padding:9px 6px;border-radius:9px;font-weight:500;color:var(--muted)}
+    .tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--soft);border-radius:12px;padding:4px;gap:4px}
+    .tabs button{border:0;background:transparent;padding:9px 4px;border-radius:9px;font-weight:500;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
     section{display:flex;flex-direction:column;gap:14px}
     .hint{color:var(--muted);font-size:13.5px;margin:0;max-width:62ch}
@@ -65,6 +65,7 @@
     .pill.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
     .pill.go{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
     .pill.mut{background:var(--soft);color:var(--muted)}
+    .pill.bad{background:color-mix(in srgb,var(--slow) 16%,transparent);color:var(--slow)}
 
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;gap:3px}
@@ -104,12 +105,37 @@
     .stats span{font-size:11.5px;color:var(--muted)}
     .spark{width:100%;height:56px;display:block}
 
+    /* Heatmap Matrice Tabelline */
+    .matrix-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0}
+    .matrix-grid{display:grid;gap:4px;user-select:none;-webkit-user-select:none;margin:0 auto}
+    .m-cell{min-width:32px;aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);font-size:11.5px;font-weight:600;cursor:pointer;position:relative;border:1px solid transparent;transition:transform .08s ease}
+    .m-cell:active{transform:scale(0.92)}
+    .m-cell small{font-size:9px;opacity:0.85;font-weight:400;line-height:1}
+    .m-cell.m-head{background:var(--soft);color:var(--ink);font-weight:700;font-size:13px}
+    .m-cell.m-head.active-row{background:var(--accent);color:var(--accent-ink)}
+    .m-cell.m-unseen{background:var(--surface);color:var(--muted);border:1px dashed var(--line)}
+    .m-cell.m-fast{background:#238636;color:#FFFFFF}
+    .m-cell.m-good{background:#4BA35B;color:#FFFFFF}
+    .m-cell.m-med{background:#D9822B;color:#FFFFFF}
+    .m-cell.m-slow{background:#C94A12;color:#FFFFFF}
+    .m-cell.has-err{box-shadow:inset 0 0 0 2px #FF5252}
+    .m-cell.selected{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+    @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+      .m-cell.m-fast{background:#1E7E34;color:#FFFFFF}
+      .m-cell.m-good{background:#3A8A48;color:#FFFFFF}
+      .m-cell.m-med{background:#BD6E1B;color:#FFFFFF}
+      .m-cell.m-slow{background:#A63507;color:#FFFFFF}
+    }}
+    .leg-box{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:4px}
+    .leg-item{display:inline-flex;align-items:center}
+
     /* Round screen */
     .game{position:fixed;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column;
       padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
       padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
     .game-in{max-width:520px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
     .gbar{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--mono)}
+    .gbar .score-wrap{display:flex;align-items:center;gap:8px}
     .gbar .score{font-size:15px}
     .gbar .score b{font-size:22px}
     .timeline{height:6px;background:var(--soft);border-radius:3px;overflow:hidden}
@@ -146,10 +172,12 @@
 
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-train" aria-selected="true" data-view="train">Allenati</button>
+    <button role="tab" id="tab-matrix" aria-selected="false" data-view="matrix">Matrice</button>
     <button role="tab" id="tab-hard" aria-selected="false" data-view="hard">Difficili</button>
     <button role="tab" id="tab-prog" aria-selected="false" data-view="prog">Progressi</button>
   </div>
 
+  <!-- TAB 1: ALLENATI -->
   <section id="v-train">
     <p class="hint">Scegli il livello e fai round da 2 minuti. Si passa al calcolo successivo appena la risposta è giusta, come su Zetamac. Ogni risposta viene cronometrata.</p>
     <div class="levels" id="levels" role="radiogroup" aria-label="Livello"></div>
@@ -181,8 +209,63 @@
     <p class="hint">Gli obiettivi e i progressi contano solo i round normali da 2 minuti.</p>
   </section>
 
+  <!-- TAB 2: MATRICE / HEATMAP TABELLINE -->
+  <section id="v-matrix" hidden>
+    <p class="hint">Mappa visiva della velocità di recupero. Verde = automatizzato (&lt;1.2s), Giallo = calcolato (&lt;2.0s), Arancione/Rosso = blocco (&gt;2.0s o errori frequenti). Tocca una casella per i dettagli o un'intestazione per allenare l'intera riga.</p>
+
+    <div class="row" style="justify-content:space-between">
+      <div class="seg" id="mat-op">
+        <button data-mop="x" aria-pressed="true">× Moltiplicazioni</button>
+        <button data-mop="p" aria-pressed="false">+ Addizioni</button>
+      </div>
+      <div class="seg" id="mat-range">
+        <button data-mr="10" aria-pressed="true">2–10</button>
+        <button data-mr="12" aria-pressed="false">2–12</button>
+      </div>
+    </div>
+
+    <!-- Indicatori padronanza matrice -->
+    <div class="pcard" style="padding:12px">
+      <div class="stats">
+        <div><b id="mat-mastery">0%</b><span>Padronanza (&lt;1.2s)</span></div>
+        <div><b id="mat-median">–</b><span>Mediana matrice</span></div>
+        <div><b id="mat-errors">0</b><span>Errori registrati</span></div>
+      </div>
+    </div>
+
+    <!-- Griglia Heatmap -->
+    <div class="matrix-scroll">
+      <div class="matrix-grid" id="matrix-grid"></div>
+    </div>
+
+    <!-- Legenda -->
+    <div class="row" style="font-size:12px;color:var(--muted);justify-content:center;gap:12px">
+      <span class="leg-item"><i class="leg-box m-fast"></i> &lt;1.2s</span>
+      <span class="leg-item"><i class="leg-box m-good"></i> 1.2–2.0s</span>
+      <span class="leg-item"><i class="leg-box m-med"></i> 2.0–2.8s</span>
+      <span class="leg-item"><i class="leg-box m-slow"></i> &gt;2.8s</span>
+      <span class="leg-item"><i class="leg-box m-unseen"></i> Non visto</span>
+    </div>
+
+    <!-- Dettaglio casella / avvio drill mirato -->
+    <div id="mat-drill-panel" class="pcard" hidden>
+      <div class="top">
+        <h2 id="mat-drill-title">7 × 8 = 56</h2>
+        <span class="pill" id="mat-drill-pill">2.4 s</span>
+      </div>
+      <p class="hint" id="mat-drill-desc">Completato 12 volte · 2 errori registrati</p>
+      <div class="row">
+        <button class="btn primary" id="mat-drill-btn">Allena questo calcolo (1 min)</button>
+        <button class="btn" id="mat-drill-close">Chiudi</button>
+      </div>
+    </div>
+
+    <button class="btn primary wide" id="mat-drill-weak">Allena tutte le caselle lente / rosse</button>
+  </section>
+
+  <!-- TAB 3: DIFFICILI -->
   <section id="v-hard" hidden>
-    <p class="hint">I calcoli su cui sei più lento, misurati come mediana delle ultime 5 volte che li hai incontrati. Un calcolo sbagliato pesa di più, perché resti fermo finché non lo correggi.</p>
+    <p class="hint">I calcoli su cui sei più lento o commetti errori, misurati come mediana delle ultime 5 volte che li hai incontrati. Un calcolo sbagliato pesa di più, perché resti fermo finché non lo correggi.</p>
     <div class="seg" id="opfilter">
       <button data-o="all" aria-pressed="true">Tutti</button>
       <button data-o="p" aria-pressed="false">+</button>
@@ -199,6 +282,7 @@
     <textarea class="copyarea" id="copyarea" readonly hidden aria-label="Elenco da copiare"></textarea>
   </section>
 
+  <!-- TAB 4: PROGRESSI & BACKUP -->
   <section id="v-prog" hidden>
     <p class="hint">Sali di livello quando la media dei round supera l'obiettivo per 3 giorni di fila e non conti più sulle dita.</p>
     <div class="prog" id="prog"></div>
@@ -223,12 +307,16 @@
   </section>
 </div>
 
+<!-- SCHERMATA GIOCO ROUND -->
 <div class="game" id="game" hidden>
   <div class="game-in">
     <div class="gbar">
       <button class="btn" id="quit">Esci</button>
       <span id="glabel" class="sync"></span>
-      <span class="score"><b id="gscore">0</b> · <span id="gtime">120</span>s</span>
+      <div class="score-wrap">
+        <span class="pill mut" id="gpace" style="font-family:var(--mono);font-size:11px">0.0 op/m</span>
+        <span class="score"><b id="gscore">0</b> · <span id="gtime">120</span>s</span>
+      </div>
     </div>
     <div class="timeline"><i id="tline"></i></div>
     <div id="play" class="game-in">
@@ -260,7 +348,19 @@ const LEVELS=[
  {id:'c',title:'Personalizzato',cfg:null,target:null}
 ];
 const SYM={p:'+',m:'−',x:'×',d:'÷'};
-const state={facts:{},history:[],settings:{level:'2',dur:120,custom:{plus:1,minus:1,times:0,div:0,add:[2,20,2,20],mul:[2,10,2,10]},filter:'all'}};
+const OP_NAMES={p:'Addizioni',m:'Sottrazioni',x:'Moltiplic.',d:'Divisioni'};
+const state={
+  facts:{},
+  history:[],
+  settings:{
+    level:'2',
+    dur:120,
+    custom:{plus:1,minus:1,times:0,div:0,add:[2,20,2,20],mul:[2,10,2,10]},
+    filter:'all',
+    matrixOp:'x',
+    matrixRange:10
+  }
+};
 const LS='calcolo-a-mente.v1';
 const $=id=>document.getElementById(id);
 
@@ -280,21 +380,58 @@ function downloadFile(filename, content, mimeType='text/plain;charset=utf-8'){
 }
 
 /* ---------- storage ---------- */
-function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s){state.facts=s.facts||{};state.history=s.history||[];Object.assign(state.settings,s.settings||{})}}catch(e){}}
+function loadLocal(){
+  try{
+    const s=JSON.parse(localStorage.getItem(LS)||'null');
+    if(s){
+      state.facts=s.facts||{};
+      state.history=s.history||[];
+      Object.assign(state.settings,s.settings||{});
+    }
+  }catch(e){}
+}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}}
 let refs=null,writing=Promise.resolve();
 function setSync(t){$('sync').textContent=t}
-function parseFact(v){const [n,last,ts]=String(v).split('|');return{n:+n||0,last:+last||0,times:(ts?ts.split(',').map(Number):[])}}
-function packFact(f){return f.n+'|'+f.last+'|'+f.times.join(',')}
-function mergeFacts(a,b){const out=Object.assign({},a);for(const k in b){if(!out[k]||parseFact(b[k]).n>parseFact(out[k]).n)out[k]=b[k]}return out}
+
+function parseFact(v){
+  const parts = String(v).split('|');
+  const n = +parts[0] || 0;
+  const last = +parts[1] || 0;
+  const times = parts[2] ? parts[2].split(',').map(Number).filter(x => !isNaN(x) && x > 0) : [];
+  const err = +parts[3] || 0;
+  return { n, last, times, err };
+}
+function packFact(f){
+  return f.n + '|' + f.last + '|' + f.times.join(',') + '|' + (f.err || 0);
+}
+function mergeFacts(a,b){
+  const out=Object.assign({},a);
+  for(const k in b){
+    if(!out[k]){
+      out[k]=b[k];
+    } else {
+      const fa=parseFact(out[k]), fb=parseFact(b[k]);
+      if(fb.n > fa.n){
+        out[k]=b[k];
+      } else {
+        fa.err = Math.max(fa.err, fb.err);
+        out[k]=packFact(fa);
+      }
+    }
+  }
+  return out;
+}
 function mergeHist(a,b){const m=new Map();a.concat(b).forEach(h=>m.set(h.t,h));return [...m.values()].sort((x,y)=>x.t-y.t)}
 function prune(){
   const keys=Object.keys(state.facts);
-  if(keys.length>3000){keys.sort((a,b)=>parseFact(state.facts[b]).last-parseFact(state.facts[a]).last);keys.slice(3000).forEach(k=>delete state.facts[k])}
+  if(keys.length>3500){
+    keys.sort((a,b)=>parseFact(state.facts[b]).last-parseFact(state.facts[a]).last);
+    keys.slice(3500).forEach(k=>delete state.facts[k]);
+  }
   if(state.history.length>2000)state.history=state.history.slice(-2000);
 }
 function pushDb(){
-  // Supporto per database esterno personalizzato (se configurato)
   if(window.CalcoloDbAdapter && typeof window.CalcoloDbAdapter.save === 'function'){
     window.CalcoloDbAdapter.save(state, { setSync });
     return;
@@ -305,7 +442,6 @@ function pushDb(){
    .catch(()=>setSync('Salvato solo su questo dispositivo'));
 }
 async function initDb(){
-  // Supporto per database esterno personalizzato (Firebase, Supabase, ecc.)
   if(window.CalcoloDbAdapter && typeof window.CalcoloDbAdapter.init === 'function'){
     try{
       await window.CalcoloDbAdapter.init(state, { setSync, saveLocal, renderAll, mergeFacts, mergeHist });
@@ -314,8 +450,6 @@ async function initDb(){
       console.warn('Inizializzazione DB esterno fallita:', err);
     }
   }
-
-  // Compatibilità con ambiente Claude Artifacts (se presente)
   if(!window.claude||!claude.use){
     setSync('Salvato su questo dispositivo (offline)');
     return;
@@ -338,7 +472,7 @@ async function initDb(){
   }catch(e){setSync('Salvato su questo dispositivo')}
 }
 
-/* ---------- helpers ---------- */
+/* ---------- helpers matematici e formatting ---------- */
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const sec=ms=>(ms/1000).toFixed(1).replace('.',',')+' s';
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -350,7 +484,13 @@ function mk(op,x,y){
   const key=(op==='p'||op==='x')?'k'+Math.min(x,y)+op+Math.max(x,y):'k'+x+op+y;
   return{op,x,y,ans,key,text:x+' '+SYM[op]+' '+y};
 }
-function fromKey(k){const m=/^k(\d+)([pmxd])(\d+)$/.exec(k);if(!m)return null;let x=+m[1],y=+m[3];if((m[2]==='p'||m[2]==='x')&&Math.random()<.5)[x,y]=[y,x];return mk(m[2],x,y)}
+function fromKey(k){
+  const m=/^k(\d+)([pmxd])(\d+)$/.exec(k);
+  if(!m)return null;
+  let x=+m[1],y=+m[3];
+  if((m[2]==='p'||m[2]==='x')&&Math.random()<.5)[x,y]=[y,x];
+  return mk(m[2],x,y);
+}
 function gen(cfg){
   const ops=['plus','minus','times','div'].filter(o=>cfg[o]);
   const o=ops[Math.floor(Math.random()*ops.length)]||'plus';
@@ -369,9 +509,14 @@ function cfgSummary(c){
 }
 function hardList(filter){
   const out=[];
-  for(const k in state.facts){const f=parseFact(state.facts[k]);if(!f.times.length)continue;const op=/[pmxd]/.exec(k.slice(1))[0];
-    if(filter&&filter!=='all'&&op!==filter)continue;out.push({key:k,op,n:f.n,med:median(f.times.slice(-5))})}
-  return out.sort((a,b)=>b.med-a.med);
+  for(const k in state.facts){
+    const f=parseFact(state.facts[k]);
+    if(!f.times.length)continue;
+    const op=/[pmxd]/.exec(k.slice(1))[0];
+    if(filter&&filter!=='all'&&op!==filter)continue;
+    out.push({key:k,op,n:f.n,med:median(f.times.slice(-5)),err:f.err||0});
+  }
+  return out.sort((a,b)=>(b.med + (b.err * 300)) - (a.med + (a.err * 300)));
 }
 function levelStats(id){
   const l=levelById(id);
@@ -389,7 +534,7 @@ function toast(t){
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
-/* ---------- render ---------- */
+/* ---------- render livelli ---------- */
 function renderLevels(){
   const box=$('levels');box.innerHTML='';
   LEVELS.forEach(l=>{
@@ -419,16 +564,209 @@ function readCustom(){
   for(let i=0;i<8;i+=2)if(v[i]>v[i+1])[v[i],v[i+1]]=[v[i+1],v[i]];
   c.add=v.slice(0,4);c.mul=v.slice(4);saveLocal();renderLevels();
 }
+
+/* ---------- render difficili ---------- */
 function renderHard(){
   const f=state.settings.filter,list=hardList(f),box=$('hardlist');
   document.querySelectorAll('#opfilter button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.o===f));
   $('start-hard').disabled=hardList('all').length<4;
-  if(!list.length){box.innerHTML='<div class="empty"><strong>Ancora niente da mostrare</strong>Gioca un round: qui compariranno i calcoli su cui impieghi più tempo, dal più lento.</div>';return}
+  if(!list.length){
+    box.innerHTML='<div class="empty"><strong>Ancora niente da mostrare</strong>Gioca un round: qui compariranno i calcoli su cui impieghi più tempo o commetti errori, dal più critico.</div>';
+    return;
+  }
   const top=list.slice(0,40),max=top[0].med||1;
-  box.innerHTML='<div class="list">'+top.map(it=>{const txt=keyText(it.key);
-    return '<div class="item"><span class="q">'+txt+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(it.med/max*100))+'%"></i></span><span class="v">'+sec(it.med)+'<small>'+it.n+(it.n===1?' volta':' volte')+'</small></span></div>'}).join('')+'</div>';
+  box.innerHTML='<div class="list">'+top.map(it=>{
+    const txt=keyText(it.key);
+    const errBadge=it.err>0?`<span class="pill bad" style="margin-left:6px;font-size:10px">${it.err} ${it.err===1?'errore':'errori'}</span>`:'';
+    return '<div class="item"><span class="q">'+txt+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(it.med/max*100))+'%"></i></span><span class="v">'+sec(it.med)+errBadge+'<small>'+it.n+(it.n===1?' volta':' volte')+'</small></span></div>';
+  }).join('')+'</div>';
 }
 function keyText(k){const m=/^k(\d+)([pmxd])(\d+)$/.exec(k);return m[1]+' '+SYM[m[2]]+' '+m[3]}
+
+/* ---------- render matrice heatmap ---------- */
+let selectedMatrixCell = null;
+function renderMatrix(){
+  const op = state.settings.matrixOp || 'x';
+  const range = state.settings.matrixRange || 10;
+  const grid = $('matrix-grid');
+  if(!grid) return;
+
+  document.querySelectorAll('#mat-op button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mop === op));
+  document.querySelectorAll('#mat-range button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.mr === range));
+
+  grid.style.gridTemplateColumns = `repeat(${range}, minmax(0, 1fr))`;
+  grid.innerHTML = '';
+
+  let totalMastered = 0;
+  let totalSeen = 0;
+  let totalErrors = 0;
+  const allMedians = [];
+  const cellsToRender = [];
+
+  // Top-left corner
+  const corner = document.createElement('div');
+  corner.className = 'm-cell m-head';
+  corner.textContent = SYM[op];
+  grid.appendChild(corner);
+
+  // Column headers (2..range)
+  for(let c = 2; c <= range; c++){
+    const ch = document.createElement('div');
+    ch.className = 'm-cell m-head';
+    ch.textContent = c;
+    grid.appendChild(ch);
+  }
+
+  // Rows (2..range)
+  for(let r = 2; r <= range; r++){
+    // Row header (clickable to drill row)
+    const rh = document.createElement('div');
+    rh.className = 'm-cell m-head clickable';
+    rh.textContent = r;
+    rh.title = `Clicca per allenare la linea del ${r}`;
+    rh.onclick = () => selectMatrixRow(r, op, range);
+    grid.appendChild(rh);
+
+    for(let c = 2; c <= range; c++){
+      const item = mk(op, r, c);
+      const factRaw = state.facts[item.key];
+      const fact = factRaw ? parseFact(factRaw) : null;
+      let med = 0, err = 0, cls = 'm-unseen';
+
+      if(fact && fact.times.length){
+        med = median(fact.times.slice(-5));
+        err = fact.err || 0;
+        totalSeen++;
+        totalErrors += err;
+        allMedians.push(med);
+
+        if(med < 1200 && err === 0){ cls = 'm-fast'; totalMastered++; }
+        else if(med < 2000){ cls = 'm-good'; }
+        else if(med < 2800){ cls = 'm-med'; }
+        else { cls = 'm-slow'; }
+      }
+
+      const cell = document.createElement('div');
+      cell.className = `m-cell ${cls} ${err > 0 ? 'has-err' : ''}`;
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      cell.dataset.key = item.key;
+      cell.dataset.ans = item.ans;
+
+      const val = item.ans;
+      const sub = med ? (med/1000).toFixed(1)+'s' : '';
+      cell.innerHTML = `<span>${val}</span>${sub ? `<small>${sub}</small>` : ''}`;
+      cell.onclick = () => selectMatrixCell(r, c, op, item.ans, fact, med, err);
+
+      grid.appendChild(cell);
+      cellsToRender.push({ r, c, key: item.key, med, err, fact });
+    }
+  }
+
+  // Aggiorna statistiche globali matrice
+  const totalCells = (range - 1) * (range - 1);
+  const masteryPct = totalCells ? Math.round((totalMastered / totalCells) * 100) : 0;
+  $('mat-mastery').textContent = masteryPct + '%';
+  $('mat-median').textContent = allMedians.length ? sec(median(allMedians)) : '–';
+  $('mat-errors').textContent = totalErrors;
+
+  // Mostra / aggiorna bottone deboli
+  const weakCount = cellsToRender.filter(c => (c.med >= 2000 || c.err > 0)).length;
+  const btnWeak = $('mat-drill-weak');
+  if(weakCount > 0){
+    btnWeak.textContent = `Allena le ${weakCount} caselle arancioni/rosse (2 min)`;
+    btnWeak.disabled = false;
+  } else {
+    btnWeak.textContent = `Nessun punto critico: tutte le tabelline sono veloci! 🎉`;
+    btnWeak.disabled = true;
+  }
+}
+
+function selectMatrixCell(r, c, op, ans, fact, med, err){
+  selectedMatrixCell = { r, c, op, key: mk(op, r, c).key, label: `${r} ${SYM[op]} ${c}` };
+  document.querySelectorAll('.m-cell').forEach(el => el.classList.remove('selected'));
+  const target = document.querySelector(`.m-cell[data-r="${r}"][data-c="${c}"]`);
+  if(target) target.classList.add('selected');
+
+  const panel = $('mat-drill-panel');
+  panel.hidden = false;
+  $('mat-drill-title').textContent = `${r} ${SYM[op]} ${c} = ${ans}`;
+  
+  const pill = $('mat-drill-pill');
+  if(!med){
+    pill.textContent = 'Non ancora visto';
+    pill.className = 'pill mut';
+  } else if(med < 1200 && !err){
+    pill.textContent = sec(med) + ' · Automatizzato';
+    pill.className = 'pill ok';
+  } else if(med < 2000){
+    pill.textContent = sec(med) + ' · Buono';
+    pill.className = 'pill go';
+  } else {
+    pill.textContent = sec(med) + ' · Da velocizzare';
+    pill.className = 'pill bad';
+  }
+
+  $('mat-drill-desc').textContent = fact && fact.n 
+    ? `Completato ${fact.n} volte · ${err} errori registrati` 
+    : 'Nessun tentativo registrato finora. Allenalo per fissarlo nella memoria.';
+
+  $('mat-drill-btn').textContent = `Allena ${r} ${SYM[op]} ${c} (1 min)`;
+  $('mat-drill-btn').onclick = () => startTargetedDrill([selectedMatrixCell.key], `Focus: ${r} ${SYM[op]} ${c}`, 60);
+}
+
+function selectMatrixRow(r, op, range){
+  const keys = [];
+  for(let c = 2; c <= range; c++){
+    keys.push(mk(op, r, c).key);
+  }
+  const title = (op === 'x' ? 'Tabellina del ' : 'Addizioni con ') + r;
+  const panel = $('mat-drill-panel');
+  panel.hidden = false;
+  $('mat-drill-title').textContent = title;
+  $('mat-drill-pill').textContent = `${range - 1} calcoli`;
+  $('mat-drill-pill').className = 'pill go';
+  $('mat-drill-desc').textContent = `Sessione intensiva dedicata a tutti i calcoli con il numero ${r}.`;
+  $('mat-drill-btn').textContent = `Allena ${title} (1 min)`;
+  $('mat-drill-btn').onclick = () => startTargetedDrill(keys, title, 60);
+}
+
+$('mat-drill-close').onclick = () => {
+  $('mat-drill-panel').hidden = true;
+  document.querySelectorAll('.m-cell').forEach(el => el.classList.remove('selected'));
+};
+
+document.querySelectorAll('#mat-op button').forEach(b => b.onclick = () => {
+  state.settings.matrixOp = b.dataset.mop;
+  saveLocal();
+  renderMatrix();
+});
+document.querySelectorAll('#mat-range button').forEach(b => b.onclick = () => {
+  state.settings.matrixRange = +b.dataset.mr;
+  saveLocal();
+  renderMatrix();
+});
+
+$('mat-drill-weak').onclick = () => {
+  const op = state.settings.matrixOp || 'x';
+  const range = state.settings.matrixRange || 10;
+  const weakKeys = [];
+  for(let r = 2; r <= range; r++){
+    for(let c = 2; c <= range; c++){
+      const k = mk(op, r, c).key;
+      const f = state.facts[k] ? parseFact(state.facts[k]) : null;
+      if(f && f.times.length){
+        const med = median(f.times.slice(-5));
+        if(med >= 2000 || f.err > 0) weakKeys.push(k);
+      }
+    }
+  }
+  if(weakKeys.length){
+    startTargetedDrill(weakKeys, 'Caselle critiche matrice', 120);
+  }
+};
+
+/* ---------- render progressi ---------- */
 function spark(scores,target){
   const W=300,H=56,n=scores.length,max=Math.max(target||0,...scores,1)*1.1,bw=W/Math.max(n,12);
   let s='<svg class="spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Ultimi punteggi">';
@@ -438,23 +776,26 @@ function spark(scores,target){
 }
 function renderProg(){
   const box=$('prog'),played=LEVELS.filter(l=>state.history.some(h=>h.l===l.id&&h.m==='n'&&h.dur===120));
-  if(!played.length){box.innerHTML='<div class="empty"><strong>Nessun round da 2 minuti ancora</strong>Dopo il primo round vedrai qui punteggi, media e giorni sopra obiettivo per ogni livello.</div>';return}
+  if(!played.length){box.innerHTML='<div class="empty"><strong>Nessun round da 2 minuti ancora</strong>Dopo il primo round vedrai qui punteggi, media, ops/min e giorni sopra obiettivo per ogni livello.</div>';return}
   box.innerHTML=played.slice().reverse().map(l=>{
     const st=levelStats(l.id),last=st.rs.slice(-20).map(h=>h.s);
     let pill='';
     if(l.target){pill=st.streak>=3?'<span class="pill ok">Pronto a salire</span>':st.streak>0?'<span class="pill go">'+st.streak+'/3 giorni sopra obiettivo</span>':'<span class="pill mut">sotto obiettivo</span>'}
+    const avgOpm = st.avg3 != null ? ((st.avg3 / 120) * 60).toFixed(1) : '–';
     return '<div class="pcard"><div class="top"><h2>'+(l.id==='c'?'Personalizzato':'Livello '+l.id)+'</h2>'+pill+'</div>'+
-      '<div class="stats"><div><b>'+(st.avg3==null?'–':Math.round(st.avg3))+'</b><span>media ultimi 3</span></div><div><b>'+st.best+'</b><span>record</span></div><div><b>'+(l.target||'–')+'</b><span>obiettivo</span></div></div>'+
+      '<div class="stats"><div><b>'+(st.avg3==null?'–':Math.round(st.avg3))+'</b><span>media 3 ('+avgOpm+' op/m)</span></div><div><b>'+st.best+'</b><span>record ('+((st.best/120)*60).toFixed(1)+' op/m)</span></div><div><b>'+(l.target||'–')+'</b><span>obiettivo</span></div></div>'+
       spark(last,l.target)+'<p class="hint">'+st.rs.length+' round in '+st.days+(st.days===1?' giorno':' giorni')+'. La linea tratteggiata è l\'obiettivo.</p></div>';
   }).join('');
 }
-function renderAll(){renderLevels();renderCustom();renderHard();renderProg()}
+function renderAll(){renderLevels();renderCustom();renderMatrix();renderHard();renderProg()}
 
-/* ---------- tabs & controls ---------- */
+/* ---------- tabs & controlli ---------- */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
-  ['train','hard','prog'].forEach(v=>$('v-'+v).hidden=v!==b.dataset.view);
-  if(b.dataset.view==='hard')renderHard();if(b.dataset.view==='prog')renderProg();
+  ['train','matrix','hard','prog'].forEach(v=>$('v-'+v).hidden=(v!==b.dataset.view));
+  if(b.dataset.view==='matrix')renderMatrix();
+  if(b.dataset.view==='hard')renderHard();
+  if(b.dataset.view==='prog')renderProg();
 });
 document.querySelectorAll('#dur button').forEach(b=>b.onclick=()=>{state.settings.dur=+b.dataset.d;saveLocal();syncDur()});
 function syncDur(){document.querySelectorAll('#dur button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.d===state.settings.dur))}
@@ -463,18 +804,20 @@ document.querySelectorAll('#opfilter button').forEach(b=>b.onclick=()=>{state.se
 $('start').onclick=()=>startGame('n');
 $('start-hard').onclick=()=>startGame('h');
 
-function exportText(){const l=hardList(state.settings.filter);return l.map((it,i)=>(i+1)+'. '+keyText(it.key)+' — '+sec(it.med)+' ('+it.n+(it.n===1?' volta':' volte')+')').join('\n')}
+function exportText(){
+  const l=hardList(state.settings.filter);
+  return l.map((it,i)=>(i+1)+'. '+keyText(it.key)+' — '+sec(it.med)+' ('+it.n+(it.n===1?' volta':' volte')+(it.err?' · '+it.err+' err':'')+')').join('\n');
+}
 $('copy').onclick=async()=>{
   const t=exportText();if(!t){toast('Elenco vuoto: gioca prima un round');return}
   try{await navigator.clipboard.writeText(t);toast('Elenco copiato')}
   catch(e){const a=$('copyarea');a.hidden=false;a.value=t;a.focus();a.select();toast('Seleziona il testo e copialo')}
 };
 
-// Download CSV calcoli lenti (funziona in qualsiasi browser)
 $('csv').onclick=()=>{
   const l=hardList(state.settings.filter);
   if(!l.length){toast('Elenco vuoto: gioca prima un round');return}
-  const csv='calcolo;operazione;mediana_secondi;volte\n'+l.map(it=>keyText(it.key)+';'+SYM[it.op]+';'+(it.med/1000).toFixed(2).replace('.',',')+';'+it.n).join('\n');
+  const csv='calcolo;operazione;mediana_secondi;volte;errori\n'+l.map(it=>keyText(it.key)+';'+SYM[it.op]+';'+(it.med/1000).toFixed(2).replace('.',',')+';'+it.n+';'+(it.err||0)).join('\n');
   downloadFile('calcoli-lenti.csv', csv, 'text/csv;charset=utf-8');
   toast('CSV calcoli lenti scaricato');
 };
@@ -528,20 +871,21 @@ $('file-import-json').onchange=(e)=>{
 
 $('btn-export-rounds-csv').onclick=()=>{
   if(!state.history.length){toast('Nessun round registrato');return}
-  const header='data;orario;livello;modalita;punteggio;durata_sec\n';
+  const header='data;orario;livello;modalita;punteggio;ops_al_minuto;errori;durata_sec\n';
   const rows=state.history.map(h=>{
     const d=new Date(h.t);
     const timeStr=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     const lvlStr=h.l==='c'?'Personalizzato':('Livello '+h.l);
-    const modeStr=h.m==='n'?'Normale':'Difficili';
-    return [h.d, timeStr, lvlStr, modeStr, h.s, h.dur].join(';');
+    const modeStr=h.m==='n'?'Normale':h.m==='h'?'Difficili':'Drill';
+    const opm=((h.s / (h.dur || 120)) * 60).toFixed(1);
+    return [h.d, timeStr, lvlStr, modeStr, h.s, opm, (h.err||0), h.dur].join(';');
   }).join('\n');
   downloadFile(`storico-round-${today()}.csv`, header+rows, 'text/csv;charset=utf-8');
   toast('Storico round scaricato');
 };
 
 $('btn-reset-data').onclick=()=>{
-  if(confirm('Vuoi davvero cancellare tutti i dati (progressi, statistiche, impostazioni)? Questa operazione non può essere annullata.')){
+  if(confirm('Vuoi davvero cancellare tutti i dati (progressi, statistiche, errori, impostazioni)? Questa operazione non può essere annullata.')){
     state.facts={};
     state.history=[];
     saveLocal();
@@ -554,40 +898,127 @@ $('btn-reset-data').onclick=()=>{
   }
 };
 
-/* ---------- game ---------- */
+/* ---------- logica di gioco (round normale e drill) ---------- */
 let G=null,raf=0;
 function startGame(mode){
   const lvl=levelById(state.settings.level),cfg=cfgOf(lvl);
   if(!['plus','minus','times','div'].some(o=>cfg[o])){toast('Scegli almeno un\'operazione');return}
   let pool=null;
-  if(mode==='h'){pool=hardList('all').slice(0,20);if(pool.length<4){toast('Servono più dati: gioca qualche round normale');return}}
+  if(mode==='h'){
+    pool=hardList('all').slice(0,20);
+    if(pool.length<4){toast('Servono più dati: gioca qualche round normale');return}
+  }
   const dur=state.settings.dur,now=performance.now();
-  G={mode,level:lvl.id,cfg,dur,end:now+dur*1000,score:0,log:[],cur:null,shown:0,input:'',pool,lastKey:null,done:false};
+  G={
+    mode,
+    level:lvl.id,
+    cfg,
+    dur,
+    end:now+dur*1000,
+    score:0,
+    totalErrors:0,
+    curErrors:0,
+    log:[],
+    cur:null,
+    shown:0,
+    input:'',
+    pool,
+    lastKey:null,
+    done:false
+  };
   $('glabel').textContent=mode==='h'?'Le più lente':(lvl.id==='c'?'Personalizzato':'Livello '+lvl.id);
-  $('gscore').textContent='0';$('play').hidden=false;$('result').hidden=true;$('game').hidden=false;
+  $('gscore').textContent='0';
+  $('gpace').textContent='0.0 op/m';
+  $('play').hidden=false;$('result').hidden=true;$('game').hidden=false;
   document.body.style.overflow='hidden';
   next();tick();
 }
-function pickHard(){const tot=G.pool.reduce((s,p)=>s+p.med,0);let r=Math.random()*tot;for(const p of G.pool){r-=p.med;if(r<=0)return fromKey(p.key)}return fromKey(G.pool[0].key)}
+
+function startTargetedDrill(keys, label, dur=60){
+  const now=performance.now();
+  const pool=keys.map(k=>{
+    const f=state.facts[k]?parseFact(state.facts[k]):null;
+    return{key:k,med:f&&f.times.length?median(f.times.slice(-5)):2500};
+  });
+  G={
+    mode:'drill',
+    level:'drill',
+    cfg:null,
+    dur,
+    end:now+dur*1000,
+    score:0,
+    totalErrors:0,
+    curErrors:0,
+    log:[],
+    cur:null,
+    shown:0,
+    input:'',
+    pool,
+    label,
+    lastKey:null,
+    done:false
+  };
+  $('glabel').textContent=label;
+  $('gscore').textContent='0';
+  $('gpace').textContent='0.0 op/m';
+  $('play').hidden=false;$('result').hidden=true;$('game').hidden=false;
+  document.body.style.overflow='hidden';
+  next();tick();
+}
+
+function pickFromPool(pool){
+  if(pool.length===1) return fromKey(pool[0].key);
+  const tot=pool.reduce((s,p)=>s+p.med,0);
+  let r=Math.random()*tot;
+  for(const p of pool){
+    r-=p.med;
+    if(r<=0) return fromKey(p.key);
+  }
+  return fromKey(pool[0].key);
+}
+
 function next(){
   let p,tries=0;
-  do{p=(G.pool&&Math.random()<.8)?pickHard():gen(G.cfg);tries++}while(p.key===G.lastKey&&tries<6);
-  G.cur=p;G.lastKey=p.key;G.input='';G.shown=performance.now();
+  do{
+    if(G.mode==='drill') p=pickFromPool(G.pool);
+    else p=(G.pool&&Math.random()<.8)?pickFromPool(G.pool):gen(G.cfg);
+    tries++;
+  }while(p.key===G.lastKey&&tries<6);
+
+  G.cur=p;G.lastKey=p.key;G.input='';G.curErrors=0;G.shown=performance.now();
   $('problem').textContent=p.text;drawAnswer();
 }
+
 function drawAnswer(bad){const a=$('answer');a.textContent=G.input;a.classList.toggle('bad',!!bad)}
+
 function press(k){
   if(!G||G.done)return;
   if(k==='del')G.input=G.input.slice(0,-1);
   else if(k==='clr')G.input='';
   else if(G.input.length<6)G.input+=k;
+
   if(G.input!==''&&+G.input===G.cur.ans){
-    G.log.push({key:G.cur.key,text:G.cur.text,ms:Math.round(performance.now()-G.shown)});
-    G.score++;$('gscore').textContent=G.score;next();return;
+    G.log.push({
+      key:G.cur.key,
+      text:G.cur.text,
+      op:G.cur.op,
+      ms:Math.round(performance.now()-G.shown),
+      err:G.curErrors||0
+    });
+    G.score++;
+    $('gscore').textContent=G.score;
+    next();
+    return;
   }
-  const bad=G.input.length>=String(G.cur.ans).length;drawAnswer(bad);
-  if(bad&&/\d/.test(k)){const a=$('answer');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake')}
+  const bad=G.input.length>=String(G.cur.ans).length;
+  drawAnswer(bad);
+  if(bad&&/\d/.test(k)){
+    G.curErrors=(G.curErrors||0)+1;
+    G.totalErrors=(G.totalErrors||0)+1;
+    const a=$('answer');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake');
+  }
 }
+
 document.querySelectorAll('#keys button').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();press(b.dataset.k)}));
 document.querySelectorAll('#keys button').forEach(b=>b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();press(b.dataset.k)}}));
 document.addEventListener('keydown',e=>{
@@ -596,40 +1027,129 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Backspace'){e.preventDefault();press('del')}
   else if(e.key==='Escape'){e.preventDefault();press('clr')}
 });
+
 function tick(){
   cancelAnimationFrame(raf);
-  const step=()=>{if(!G||G.done)return;const left=Math.max(0,G.end-performance.now());
-    $('gtime').textContent=Math.ceil(left/1000);$('tline').style.transform='scaleX('+(left/(G.dur*1000))+')';
-    if(left<=0){finish();return}raf=requestAnimationFrame(step)};
+  const step=()=>{
+    if(!G||G.done)return;
+    const left=Math.max(0,G.end-performance.now());
+    const elapsed=(G.dur*1000-left)/1000;
+    $('gtime').textContent=Math.ceil(left/1000);
+    $('tline').style.transform='scaleX('+(left/(G.dur*1000))+')';
+
+    if(elapsed>=2){
+      const liveOpm=((G.score/elapsed)*60).toFixed(1);
+      $('gpace').textContent=liveOpm+' op/m';
+    }
+    if(left<=0){finish();return}
+    raf=requestAnimationFrame(step);
+  };
   raf=requestAnimationFrame(step);
 }
+
 function finish(partial){
   G.done=true;cancelAnimationFrame(raf);
   const now=Date.now();
-  G.log.forEach(r=>{const f=state.facts[r.key]?parseFact(state.facts[r.key]):{n:0,last:0,times:[]};f.n++;f.last=now;f.times.push(r.ms);f.times=f.times.slice(-6);state.facts[r.key]=packFact(f)});
-  if(G.log.length&&!partial)state.history.push({t:now,d:today(),l:G.level,m:G.mode,s:G.score,dur:G.dur});
+  G.log.forEach(r=>{
+    const f=state.facts[r.key]?parseFact(state.facts[r.key]):{n:0,last:0,times:[],err:0};
+    f.n++;
+    f.last=now;
+    f.times.push(r.ms);
+    f.times=f.times.slice(-6);
+    f.err=(f.err||0)+(r.err||0);
+    state.facts[r.key]=packFact(f);
+  });
+  if(G.log.length&&!partial){
+    state.history.push({
+      t:now,
+      d:today(),
+      l:G.level,
+      m:G.mode,
+      s:G.score,
+      dur:G.dur,
+      err:G.totalErrors||0
+    });
+  }
   prune();saveLocal();if(G.log.length)pushDb();renderAll();
   if(partial)closeGame();else showResult();
 }
+
 function showResult(){
-  const lvl=levelById(G.level),res=$('result');
+  const res=$('result');
   const avg=G.log.length?G.log.reduce((s,r)=>s+r.ms,0)/G.log.length:0;
-  const byKey=new Map();G.log.forEach(r=>{if(!byKey.has(r.key)||byKey.get(r.key).ms<r.ms)byKey.set(r.key,r)});
+  const opm=((G.score/G.dur)*60).toFixed(1);
+  const totalAttempts=G.score+(G.totalErrors||0);
+  const acc=totalAttempts?Math.round((G.score/totalAttempts)*100):100;
+
+  // Rilevamento per calcoli lenti
+  const byKey=new Map();
+  G.log.forEach(r=>{if(!byKey.has(r.key)||byKey.get(r.key).ms<r.ms)byKey.set(r.key,r)});
   const slow=[...byKey.values()].sort((a,b)=>b.ms-a.ms).slice(0,8),max=slow.length?slow[0].ms:1;
+
+  // Breakdown per operazione
+  const opMap={};
+  G.log.forEach(r=>{
+    if(!opMap[r.op]) opMap[r.op]={count:0,times:[],err:0};
+    opMap[r.op].count++;
+    opMap[r.op].times.push(r.ms);
+    opMap[r.op].err+=(r.err||0);
+  });
+  const opKeys=Object.keys(opMap);
+  let breakdownHtml='';
+  if(opKeys.length>1){
+    breakdownHtml='<div class="label" style="margin-top:2px">Breakdown per operazione</div>'+
+      '<div class="stats" style="grid-template-columns:repeat('+Math.min(4,opKeys.length)+',1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px">'+
+      opKeys.map(k=>{
+        const o=opMap[k];
+        const med=median(o.times);
+        const errTxt=o.err?`<span style="color:var(--slow);font-size:10px"> (${o.err} err)</span>`:'';
+        return `<div><span style="font-weight:600;font-size:13px;color:var(--ink)">${SYM[k]} ${OP_NAMES[k]}</span><b style="font-size:16px">${o.count}</b><span>${sec(med)}${errTxt}</span></div>`;
+      }).join('')+'</div>';
+  }
+
   let verdict='';
-  if(G.mode==='n'&&lvl.target){
-    if(G.dur!==120)verdict='Round da '+G.dur/60+' min: non conta per l\'obiettivo, che vale per i round da 2 minuti.';
-    else{const st=levelStats(lvl.id);verdict=(G.score>=lvl.target?'Sopra l\'obiettivo di '+lvl.target+'.':'Obiettivo del livello: '+lvl.target+'.')+(st.streak>=3?' Hai superato l\'obiettivo per 3 giorni di fila: puoi passare al livello successivo.':st.avg3!=null?' Media degli ultimi 3 round: '+Math.round(st.avg3)+'.':'')}
-  }else if(G.mode==='h')verdict='Round sulle più lente. Rigiocale finché i tempi non si avvicinano agli altri calcoli.';
-  res.innerHTML='<div><div class="label">'+esc($('glabel').textContent)+'</div><div class="big">'+G.score+'</div><p class="verdict">'+verdict+'</p><p class="hint">In media '+(G.log.length?sec(avg):'–')+' per risposta.</p></div>'+
-   (slow.length?'<div class="label">Le più lente di questo round</div><div class="list">'+slow.map(r=>'<div class="item"><span class="q">'+esc(r.text)+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(r.ms/max*100))+'%"></i></span><span class="v">'+sec(r.ms)+'</span></div>').join('')+'</div>':'')+
-   '<button class="btn primary wide" id="again">Un altro round</button><div class="row"><button class="btn" id="tohard">Allena le più lente</button><button class="btn" id="close">Chiudi</button></div>';
+  if(G.mode==='n'){
+    const lvl=levelById(G.level);
+    if(lvl.target){
+      if(G.dur!==120)verdict='Round da '+G.dur/60+' min: non conta per l\'obiettivo, che vale per i round da 2 minuti.';
+      else{
+        const st=levelStats(lvl.id);
+        verdict=(G.score>=lvl.target?'Sopra l\'obiettivo di '+lvl.target+'.':'Obiettivo del livello: '+lvl.target+'.')+(st.streak>=3?' Hai superato l\'obiettivo per 3 giorni di fila: puoi passare al livello successivo.':st.avg3!=null?' Media degli ultimi 3 round: '+Math.round(st.avg3)+'.':'');
+      }
+    }
+  }else if(G.mode==='h'){
+    verdict='Round sulle più lente. Continua finché i tempi non si avvicinano agli altri calcoli.';
+  }else if(G.mode==='drill'){
+    verdict='Sessione completata su: '+G.label+'. Rigiocala per portare tutte le risposte sotto 1.2 secondi!';
+  }
+
+  res.innerHTML='<div>'+
+    '<div class="label">'+esc($('glabel').textContent)+'</div>'+
+    '<div class="big">'+G.score+'</div>'+
+    '<div class="row" style="gap:8px;margin-bottom:8px">'+
+      '<span class="pill go" style="font-size:13px;padding:3px 10px">'+opm+' ops/min</span>'+
+      '<span class="pill '+(acc>=90?'ok':'bad')+'" style="font-size:13px;padding:3px 10px">Precisione '+acc+'% ('+(G.totalErrors||0)+' err)</span>'+
+    '</div>'+
+    '<p class="verdict">'+verdict+'</p>'+
+    '<p class="hint">In media '+(G.log.length?sec(avg):'–')+' per risposta su '+(G.log.length)+' calcoli risolti.</p>'+
+    '</div>'+
+    breakdownHtml+
+    (slow.length?'<div class="label" style="margin-top:2px">Le più lente di questo round</div><div class="list">'+slow.map(r=>{
+      const errBadge=r.err?`<span class="pill bad" style="margin-left:4px;font-size:10px">${r.err} err</span>`:'';
+      return '<div class="item"><span class="q">'+esc(r.text)+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(r.ms/max*100))+'%"></i></span><span class="v">'+sec(r.ms)+errBadge+'</span></div>';
+    }).join('')+'</div>':'')+
+    '<button class="btn primary wide" id="again">Un altro round</button><div class="row"><button class="btn" id="tohard">Allena le più lente</button><button class="btn" id="close">Chiudi</button></div>';
+
   $('play').hidden=true;res.hidden=false;
-  const mode=G.mode;
-  $('again').onclick=()=>startGame(mode);
+  const currentMode=G.mode, currentLabel=G.label, currentPool=G.pool, currentDur=G.dur;
+  $('again').onclick=()=>{
+    if(currentMode==='drill') startTargetedDrill(currentPool.map(p=>p.key), currentLabel, currentDur);
+    else startGame(currentMode);
+  };
   $('tohard').onclick=()=>startGame('h');
   $('close').onclick=closeGame;
 }
+
 function closeGame(){if(G&&!G.done){G.done=true;cancelAnimationFrame(raf)}$('game').hidden=true;document.body.style.overflow='';G=null}
 $('quit').onclick=()=>{if(G&&!G.done&&G.log.length)finish(true);else closeGame()};
 
