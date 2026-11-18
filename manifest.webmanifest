@@ -1,0 +1,40 @@
+{
+  "name": "Calcolo a Mente - Allenatore",
+  "short_name": "Calcolo",
+  "id": "calcolo-a-mente",
+  "description": "Allenatore di calcolo a mente veloce: round a tempo, tracciamento delle debolezze e statistiche di progresso.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1F2EC",
+  "theme_color": "#2C47D3",
+  "lang": "it",
+  "categories": ["education", "games", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
