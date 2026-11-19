@@ -17,8 +17,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
   <script src="db-sync.js"></script>
+  <script src="training-engine.js"></script>
   <style>
     body{margin:0}
     [hidden]{display:none!important}
@@ -104,6 +105,18 @@
     .daily-card{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
     .daily-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none;font-size:12px;color:var(--muted)}
     .daily-steps b{display:block;color:var(--ink);font-size:13px}
+    select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px;max-width:100%}
+    .exercise-options{display:flex;flex-direction:column;gap:10px}
+    .problem.word{font-family:var(--display);font-size:clamp(22px,6vw,34px);white-space:normal;text-align:center;max-width:100%;line-height:1.25}
+    .help-panel{padding:12px;background:var(--soft);border-radius:12px;text-align:center;max-height:40vh;overflow:auto}
+    .help-panel p{margin:6px 0;font-size:14px}
+    .stage{gap:8px}
+    .question-tools{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+    .gbar #glabel{min-width:0;font-size:11px}
+    .gbar .score-wrap{flex-shrink:0;gap:5px}
+    .skill-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+    .skill-row button{font-size:12px;padding:6px 10px}
+    @media(max-width:400px){.keys button{min-height:48px}.gbar{gap:6px}.gbar .btn{padding:8px}.gbar .score b{font-size:18px}#gpace{display:none}}
     .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
     .stats div{display:flex;flex-direction:column}
     .stats b{font-family:var(--mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -194,6 +207,19 @@
 
   <!-- TAB 1: ALLENA -->
   <section id="v-train">
+    <div class="pcard exercise-options">
+      <label for="exercise-mode" class="label">Tipo di esercizio</label>
+      <select id="exercise-mode">
+        <option value="normal">Calcolo classico</option><option value="missing">Trova l’incognita</option>
+        <option value="chain">Catene di operazioni</option><option value="flash">Numeri in sequenza · Flash Anzan</option>
+        <option value="audio">Solo ascolto</option><option value="estimate">Stima · tolleranza ±5%</option>
+        <option value="discount">Vita reale · sconti</option><option value="vat">Vita reale · IVA al 22%</option>
+        <option value="change">Vita reale · resto alla cassa</option><option value="tip">Vita reale · mance</option>
+      </select>
+      <p class="hint" id="exercise-description"></p>
+      <label><input type="checkbox" id="adaptive-mode" checked> Difficoltà automatica · obiettivo circa 85% corrette</label>
+      <p class="hint">Dopo 2 errori o 6 secondi compare un aiuto. Puoi sempre mostrare la soluzione e passare oltre.</p>
+    </div>
     <div class="pcard daily-card">
       <div class="top"><h2>Allenamento di oggi</h2><span class="pill go" id="daily-badge">4 min</span></div>
       <p class="hint" id="daily-status" aria-live="polite"></p>
@@ -316,18 +342,19 @@
         <h2>5. I 7 Calcoli Assassini delle Tabelline</h2>
         <span class="pill bad">I blocchi tipici</span>
       </div>
-      <p class="hint">Quasi tutti i blocchi mentali sulle tabelline si concentrano su 7 combinazioni: 6&times;7, 6&times;8, 7&times;7, 7&times;8, 7&times;9, 8&times;8, 8&times;9. Allena solo loro a ripetizione.</p>
+      <p class="hint" id="killers-description">I tuoi 7 calcoli più difficili vengono scelti dai tempi al primo tasto e dagli errori recenti. Gioca prima qualche round con le tabelline.</p>
       <div class="trick-box">
         <b>7 &times; 8 = 56</b> (ricorda la sequenza consecutiva: <b>5-6-7-8</b>)<br>
         <b>7 &times; 9 = 63</b> (prima cifra: 7−1=<b>6</b>, seconda: 9−6=<b>3</b>)
       </div>
-      <button class="btn primary wide" data-trick="killers">Allena solo i 7 calcoli assassini (1 min)</button>
+      <button class="btn primary wide" id="start-killers">Allena i miei 7 calcoli difficili (1 min)</button>
     </div>
+    <div id="extra-techniques"></div>
   </section>
 
   <!-- TAB 3: MATRICE / HEATMAP TABELLINE -->
   <section id="v-matrix" hidden>
-    <p class="hint">Velocità delle ultime 5 risposte. Verde scuro = padronanza confermata in verifiche miste su più giorni; il bordo rosso indica errori recenti. Tocca una casella per i dettagli o un'intestazione per allenare l'intera riga.</p>
+    <p class="hint">Tempo al primo tasto: una stima della preparazione della risposta, distinta dalla digitazione. I dati vecchi mostrano ancora il tempo totale e non confermano la nuova padronanza. Il bordo rosso indica errori recenti.</p>
 
     <div class="row" style="justify-content:space-between">
       <div class="seg" id="mat-op">
@@ -381,7 +408,9 @@
 
   <!-- TAB 4: DIFFICILI -->
   <section id="v-hard" hidden>
-    <p class="hint">I calcoli più difficili, ordinati per mediana delle ultime 5 risposte ed errori negli ultimi 5 tentativi. Gli errori storici restano nei dettagli, ma non ti penalizzano per sempre.</p>
+    <p class="hint">Tabelline e calcoli semplici restano individuali. Per i numeri grandi seguiamo abilità come riporto e prestito: il ripasso propone calcoli nuovi della stessa famiglia. Le ipotesi sugli errori servono a scegliere esercizi mirati.</p>
+    <div id="skill-list" class="pcard"></div>
+    <div id="error-analysis" class="pcard"></div>
     <div class="seg" id="opfilter">
       <button data-o="all" aria-pressed="true">Tutti</button>
       <button data-o="p" aria-pressed="false">+</button>
@@ -390,7 +419,7 @@
       <button data-o="d" aria-pressed="false">÷</button>
     </div>
     <div id="hardlist"></div>
-    <button class="btn primary wide" id="start-hard">Allena le 20 più lente</button>
+    <button class="btn primary wide" id="start-hard">Allena calcoli e abilità difficili</button>
     <div class="row">
       <button class="btn" id="copy">Copia elenco</button>
       <button class="btn" id="csv">Scarica CSV</button>
@@ -400,7 +429,7 @@
 
   <!-- TAB 5: PROGRESSI, TARGET & BACKUP -->
   <section id="v-prog" hidden>
-    <p class="hint">Sali di livello quando la media dei round supera l'obiettivo per 3 giorni di fila e non conti più sulle dita.</p>
+    <p class="hint">La difficoltà automatica cerca una precisione tra l’80% e il 90%. Dopo almeno 10 esercizi autonomi, un round classico può spostarti di un livello. Disattivala per scegliere liberamente il livello.</p>
 
     <!-- Card Padronanza Assoluta (<1.2s) -->
     <div class="pcard" id="card-mastery" style="padding:14px">
@@ -408,7 +437,7 @@
         <h2>Target di Padronanza (&lt;1.2s)</h2>
         <span class="pill ok">Automatismo</span>
       </div>
-      <p class="hint">La padronanza richiede almeno 5 risposte in verifiche miste su 2 giorni diversi, mediana sotto 1,2 s e nessun errore recente. Contano i round normali e la verifica finale dell’allenamento di oggi; i drill preparano alla verifica. Gli errori passati restano nello storico.</p>
+      <p class="hint">Almeno 5 risposte autonome in verifiche miste su 2 giorni diversi, mediana al primo tasto sotto 1,2 s e nessun errore recente. Aiuti, ripetizioni e tempi storici senza primo tasto non confermano la padronanza. Il primo tasto è una stima, non una misura pura del ragionamento.</p>
       <div class="stats">
         <div><b id="stat-mastered-count">0</b><span>Padroneggiati</span></div>
         <div><b id="stat-seen-count">0</b><span>Calcoli visti</span></div>
@@ -455,12 +484,16 @@
       <div class="stage">
         <div class="problem" id="problem">7 + 8</div>
         <div class="answer" id="answer" aria-live="polite"></div>
+        <p class="hint" id="question-status" aria-live="polite"></p>
+        <div class="question-tools"><button class="btn" id="show-solution">Mostra soluzione / passa</button><button class="btn" id="replay-audio" hidden>Riascolta</button></div>
+        <div class="help-panel" id="help-panel" hidden><strong id="help-answer"></strong><p id="help-method"></p><p class="hint">Questo calcolo tornerà dopo 3 e dopo 8 esercizi.</p><button class="btn primary" id="help-next">Continua</button></div>
       </div>
       <div class="keys" id="keys">
         <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
         <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
         <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
         <button data-k="clr" class="fn" aria-label="Cancella tutto">C</button><button data-k="0">0</button><button data-k="del" class="fn" aria-label="Cancella cifra">⌫</button>
+        <button data-k="." class="fn" aria-label="Virgola decimale">,</button><button data-k="enter" class="fn" style="grid-column:span 2">Conferma ↵</button>
       </div>
     </div>
     <div class="result" id="result" hidden></div>
@@ -469,6 +502,7 @@
 
 <script>
 (function(){
+const Engine=window.MathTrainer;
 const LEVELS=[
  {id:'1',title:'Addizioni entro 20',cfg:{plus:1,add:[2,10,2,10],mul:[2,10,2,10]},target:40},
  {id:'2',title:'Addizioni e sottrazioni entro 20',cfg:{plus:1,minus:1,add:[2,10,2,10],mul:[2,10,2,10]},target:35},
@@ -492,7 +526,8 @@ const state={
     matrixOp:'x',
     matrixRange:10,
     sound:true,
-    haptic:true
+    haptic:true,
+    adaptive:true,exercise:'normal'
   }
 };
 window.state = state;
@@ -589,7 +624,6 @@ function loadLocal(){
   }catch(e){}
 }
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}}
-let refs=null,writing=Promise.resolve();
 function setSync(t){$('sync').textContent=t}
 
 /* ---------- learning core (shared by all training modes) ---------- */
@@ -605,46 +639,53 @@ function parseFact(v){
   const err = +parts[3] || 0;
   let extra={};
   try{extra=JSON.parse(parts[4]||'{}')||{}}catch(e){}
-  return { n, last, times, err,
+  return { ...extra,n,last,times,err,
     recent:Array.isArray(extra.recent)?extra.recent.slice(-5):[],
     checks:Array.isArray(extra.checks)?extra.checks.slice(-5):[],
+    firstTimes:Array.isArray(extra.firstTimes)?extra.firstTimes.filter(Number.isFinite).slice(-6):[],
+    attempts:Array.isArray(extra.attempts)?extra.attempts.slice(-20):[],
     review:extra.review&&Number.isFinite(extra.review.due)?extra.review:null
   };
 }
 function packFact(f){
   // Keep the legacy prefix readable by older backups and adapters.
-  return f.n+'|'+f.last+'|'+f.times.join(',')+'|'+(f.err||0)+'|'+JSON.stringify({recent:f.recent,checks:f.checks,review:f.review});
+  return f.n+'|'+f.last+'|'+f.times.join(',')+'|'+(f.err||0)+'|'+JSON.stringify({recent:f.recent,checks:f.checks,review:f.review,firstTimes:f.firstTimes,attempts:f.attempts,adaptive:f.adaptive,trackOnly:f.trackOnly});
 }
 function factStats(f){
-  const checks=f.checks||[], recent=f.recent||[];
+  const checks=(f.checks||[]).filter(c=>c.metric==='first'),recent=f.recent||[];
   const errors=recent.reduce((s,r)=>s+(r.err||0),0);
+  const aids=recent.filter(r=>r.assisted).length;
   const count=checks.reduce((s,c)=>s+c.count,0);
   const days=new Set(checks.map(c=>c.day)).size;
-  const med=median(f.times.slice(-5));
-  const mastered=count>=5&&days>=2&&checks.every(c=>!c.err)&&median(checks.map(c=>c.ms))<1200&&errors===0;
-  return {med,errors,count,days,mastered};
+  const med=median((f.firstTimes.length?f.firstTimes:f.times).slice(-5));
+  const mastered=count>=5&&days>=2&&checks.every(c=>!c.err&&!c.assisted)&&median(checks.map(c=>c.ms))<1200&&errors===0&&aids===0;
+  return {med,errors,aids,count,days,mastered,first:!!f.firstTimes.length,totalMed:median(f.times.slice(-5))};
 }
-function recordFact(f,results,{now,session,verify=false,partial=false}){
+function recordFact(f,results,{now,session,verify=false,partial=false,adaptive=true}){
   const solved=results.filter(r=>r.completed!==false);
   const errors=results.reduce((s,r)=>s+(r.err||0),0);
   f.recent=f.recent||[];f.checks=f.checks||[];
   for(const r of results){
     if(r.completed!==false){f.n++;f.times.push(r.ms)}
+    if(r.completed!==false&&Number.isFinite(r.firstMs)&&!r.assisted&&!r.repeat)f.firstTimes.push(r.firstMs);
     f.err+=(r.err||0);
-    f.recent.push({err:r.err||0});
+    f.recent.push({err:r.err||0,assisted:!!r.assisted});
+    f.attempts.push(...(r.answers||[]).map(a=>({...a,t:now,text:r.text,expected:r.expected})));
+    if(!r.repeat){const prior=f.adaptive;f.adaptive=Engine.adapt(prior,!r.err&&!r.assisted&&r.completed!==false);if(!adaptive)f.adaptive.tier=prior?.tier||2}
   }
-  f.times=f.times.slice(-6);f.recent=f.recent.slice(-5);f.last=now;
+  f.times=f.times.slice(-6);f.recent=f.recent.slice(-5);f.firstTimes=f.firstTimes.slice(-6);f.attempts=f.attempts.slice(-20);f.last=now;
   // One observation per session prevents a repeated drill from manufacturing mastery.
-  if(verify&&!partial&&solved.length){
-    f.checks.push({ms:median(solved.map(r=>r.ms)),err:errors,count:solved.length,day:dayOf(now),t:now,session});
+  const independent=solved.filter(r=>Number.isFinite(r.firstMs)&&!r.assisted&&!r.repeat);
+  if(verify&&!partial&&independent.length){
+    f.checks.push({metric:'first',ms:median(independent.map(r=>r.firstMs)),err:errors,assisted:results.some(r=>r.assisted),count:independent.length,day:dayOf(now),t:now,session});
     f.checks=f.checks.slice(-5);
   }
-  const failed=errors>0||solved.length!==results.length;
+  const failed=errors>0||solved.length!==results.length||results.some(r=>r.assisted);
   if(failed){
     f.review={days:0,due:now+10*60000,at:now};
   }else if(!partial&&solved.length){
     const old=f.review;
-    const slow=median(solved.map(r=>r.ms))>=2000;
+    const slow=median(solved.map(r=>Number.isFinite(r.firstMs)?r.firstMs:r.ms))>=2000;
     let days=1;
     if(!slow&&old&&old.days>0){
       const advance=now>=old.due;
@@ -659,8 +700,10 @@ function recordFact(f,results,{now,session,verify=false,partial=false}){
 function reviewQueue(facts,now=Date.now()){
   const queue=[];
   for(const key in facts){
-    if(!/^k\d+[pmxd]\d+$/.test(key))continue;
+    if(!/^k\d+[pmxd]\d+$/.test(key)&&!key.startsWith('s:'))continue;
     const f=parseFact(facts[key]);
+    if(f.trackOnly)continue;
+    if(key.startsWith('k')){const p=Engine.fromKey(key);if(p&&Engine.aggregate(p))continue}
     if(!f.n&&!f.recent.length)continue;
     const stats=factStats(f),due=f.review?f.review.due:f.last+DAY_MS;
     if(due<=now)queue.push({key,due,med:stats.med||2500,err:stats.errors});
@@ -681,6 +724,10 @@ function mergeFacts(a,b){
       winner.checks=[...checks.values()].sort((x,y)=>x.t-y.t).slice(-5);
       const latest=fb.last>fa.last?fb:fa;
       winner.recent=latest.recent;
+      winner.firstTimes=latest.firstTimes;
+      winner.adaptive=latest.adaptive;
+      const attempts=new Map();fa.attempts.concat(fb.attempts).forEach(a=>attempts.set(a.t+':'+a.text+':'+a.input,a));
+      winner.attempts=[...attempts.values()].sort((x,y)=>x.t-y.t).slice(-20);
       const reviews=[fa.review,fb.review].filter(Boolean).sort((x,y)=>y.at-x.at);
       winner.review=reviews[0]||null;
       out[k]=packFact(winner);
@@ -703,10 +750,6 @@ function pushDb(){
     window.CalcoloDbAdapter.save(state, { setSync });
     return;
   }
-  if(!refs)return;
-  setSync('Salvataggio…');
-  writing=writing.then(async()=>{await refs.facts.set({f:state.facts});await refs.hist.set({h:state.history});setSync('Salvato nel tuo account')})
-   .catch(()=>setSync('Salvato solo su questo dispositivo'));
 }
 async function initDb(){
   if(window.CalcoloDbAdapter && typeof window.CalcoloDbAdapter.init === 'function'){
@@ -717,26 +760,7 @@ async function initDb(){
       console.warn('Inizializzazione DB esterno fallita:', err);
     }
   }
-  if(!window.claude||!claude.use){
-    setSync('Salvato su questo dispositivo (offline)');
-    return;
-  }
-  try{
-    const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
-    if(!db||!user)return;
-    const id=await user.id(); if(!id)return;
-    const col=db.collection('data/users/'+id);
-    const r={facts:col.doc('facts'),hist:col.doc('history')};
-    setSync('Collegamento…');
-    const slow=setTimeout(()=>setSync('Account non raggiungibile: salvo su questo dispositivo'),10000);
-    const [f,h]=await Promise.all([r.facts.get(),r.hist.get()]);
-    clearTimeout(slow);
-    const rf=f.exists?(f.data().f||{}):{}, rh=h.exists?(h.data().h||[]):[];
-    const hadLocalExtra=state.history.some(x=>!rh.find(y=>y.t===x.t));
-    state.facts=mergeFacts(rf,state.facts);state.history=mergeHist(rh,state.history);
-    refs=r;saveLocal();renderAll();
-    if(hadLocalExtra||!f.exists)pushDb();else setSync('Salvato nel tuo account');
-  }catch(e){setSync('Salvato su questo dispositivo')}
+  setSync('Salvato su questo dispositivo');
 }
 
 /* ---------- helpers matematici e formatting ---------- */
@@ -746,11 +770,10 @@ const today=()=>dayOf(Date.now());
 function levelById(id){return LEVELS.find(l=>l.id===id)||LEVELS[1]}
 function cfgOf(l){return l.id==='c'?state.settings.custom:l.cfg}
 function mk(op,x,y){
-  const ans=op==='p'?x+y:op==='m'?x-y:op==='x'?x*y:x/y;
-  const key=(op==='p'||op==='x')?'k'+Math.min(x,y)+op+Math.max(x,y):'k'+x+op+y;
-  return{op,x,y,ans,key,text:x+' '+SYM[op]+' '+y};
+  return Engine.make(op,x,y);
 }
 function fromKey(k){
+  if(k.startsWith('s:'))return Engine.fromKey(k,skillTier(k.slice(2)));
   const m=/^k(\d+)([pmxd])(\d+)$/.exec(k);
   if(!m)return null;
   let x=+m[1],y=+m[3];
@@ -769,6 +792,7 @@ function gen(cfg){
 
 /* Generatore Matematico Dedicato per i Trucchi */
 function genTrickProblem(trickId){
+  if(Engine.LABELS[trickId])return Engine.generateSkill(trickId,skillTier(trickId));
   if(trickId === 'ltr'){
     // Da sinistra a destra: somme a due cifre con riporto assicurato nelle unità (somma unità >= 11)
     const tens1 = rnd(2, 6) * 10;
@@ -814,13 +838,6 @@ function genTrickProblem(trickId){
     const sub = rnd(units + 2, 9);
     return mk('m', a, sub);
   }
-  if(trickId === 'killers'){
-    // I 7 calcoli assassini delle tabelline
-    const killers = [[6,7], [6,8], [7,7], [7,8], [7,9], [8,8], [8,9]];
-    const pair = killers[Math.floor(Math.random() * killers.length)];
-    const [x, y] = Math.random() < 0.5 ? pair : [pair[1], pair[0]];
-    return mk('x', x, y);
-  }
   return gen({ plus: 1, add: [2, 20, 2, 20], mul: [2, 10, 2, 10] });
 }
 
@@ -835,24 +852,26 @@ function cfgSummary(c){
 function hardList(filter){
   const out=[];
   for(const k in state.facts){
+    if(!k.startsWith('k')&&!k.startsWith('s:'))continue;
     const f=parseFact(state.facts[k]);
-    if(!f.times.length)continue;
-    const op=/[pmxd]/.exec(k.slice(1))[0];
+    if(f.trackOnly||(!f.times.length&&!f.recent.length))continue;
+    const p=k.startsWith('k')?Engine.fromKey(k):null;
+    if(p&&Engine.aggregate(p))continue;
+    const op=p?p.op:skillOp(k.slice(2));
     if(filter&&filter!=='all'&&op!==filter)continue;
     const stats=factStats(f);
-    out.push({key:k,op,n:f.n,med:stats.med,err:stats.errors,totalErr:f.err||0});
+    const hasTime=stats.first||f.times.length>0;
+    out.push({key:k,op,n:f.n,med:stats.med,rankMs:hasTime?stats.med:6000,hasTime,err:stats.errors,aids:stats.aids,totalErr:f.err||0,first:stats.first});
   }
-  return out.sort((a,b)=>(b.med + (b.err * 300)) - (a.med + (a.err * 300)));
+  return out.sort((a,b)=>(b.rankMs+b.err*300+b.aids*600)-(a.rankMs+a.err*300+a.aids*600));
 }
 
 function levelStats(id){
   const l=levelById(id);
-  const rs=state.history.filter(h=>h.l===id&&h.m==='n'&&h.dur===120);
+  const rs=state.history.filter(h=>h.l===id&&h.m==='n'&&h.dur===120&&(!h.exercise||h.exercise==='normal'));
   const byDay=new Map();rs.forEach(h=>{if(!byDay.has(h.d))byDay.set(h.d,[]);byDay.get(h.d).push(h.s)});
-  const days=[...byDay.entries()].sort((a,b)=>a[0]<b[0]?1:-1).map(([d,s])=>s.reduce((x,y)=>x+y,0)/s.length);
-  let streak=0;if(l.target)for(const m of days){if(m>=l.target)streak++;else break}
   const last3=rs.slice(-3).map(h=>h.s);
-  return{rs,streak,avg3:last3.length?last3.reduce((a,b)=>a+b,0)/last3.length:null,best:rs.length?Math.max(...rs.map(h=>h.s)):null,days:days.length};
+  return{rs,avg3:last3.length?last3.reduce((a,b)=>a+b,0)/last3.length:null,best:rs.length?Math.max(...rs.map(h=>h.s)):null,days:byDay.size};
 }
 
 function toast(t){
@@ -871,7 +890,7 @@ function renderLevels(){
     b.setAttribute('aria-checked',state.settings.level===l.id);
     let right='';
     if(l.target){right='<span>obiettivo '+l.target+'</span>';
-      if(st.streak>=3)right+='<span class="pill ok">Pronto a salire</span>';
+      if(state.settings.adaptive&&state.settings.level===l.id)right+='<span class="pill go">Automatico</span>';
       else if(st.best!=null)right+='<span class="pill mut">record '+st.best+'</span>';}
     b.innerHTML='<span class="n">'+(l.id==='c'?'·':l.id)+'</span><span><div class="t">'+esc(l.title)+'</div><div class="s">'+esc(cfgSummary(cfgOf(l)))+'</div></span><span class="r">'+right+'</span>';
     b.onclick=()=>{state.settings.level=l.id;saveLocal();renderLevels();renderCustom()};
@@ -893,6 +912,60 @@ function readCustom(){
   c.add=v.slice(0,4);c.mul=v.slice(4);saveLocal();renderLevels();
 }
 
+function skillOp(id){
+  if(id.startsWith('add')||['missing-p','flash','vat'].includes(id))return 'p';
+  if(id.startsWith('sub')||['missing-m','discount','change'].includes(id))return 'm';
+  if(id.startsWith('div')||['missing-d','divide-five'].includes(id))return 'd';
+  if(id.startsWith('table-')||id.startsWith('mul-')||['missing-x','eleven','square-five','squares','conjugates','near-100','tip','estimate','error-neighbor','error-reversed'].includes(id))return 'x';
+  return 'all';
+}
+function skillTier(id){return G?.skillScores?.[id]?.tier||parseFact(state.facts['s:'+id]||'').adaptive?.tier||2}
+function ensureSkillRecords(){
+  const grouped=new Map();
+  for(const key in state.facts){
+    if(!key.startsWith('k'))continue;
+    const p=Engine.fromKey(key);if(!p||!Engine.aggregate(p))continue;
+    const target=Engine.learningKey(p);if(state.facts[target])continue;
+    if(!grouped.has(target))grouped.set(target,[]);grouped.get(target).push(parseFact(state.facts[key]));
+  }
+  grouped.forEach((items,key)=>{
+    const f=parseFact('');f.n=items.reduce((s,x)=>s+x.n,0);f.err=items.reduce((s,x)=>s+x.err,0);
+    f.last=Math.max(...items.map(x=>x.last));f.times=items.sort((a,b)=>a.last-b.last).flatMap(x=>x.times).slice(-6);
+    state.facts[key]=packFact(f);
+  });
+  if(grouped.size)saveLocal();
+}
+function renderLearningUI(){
+  const descriptions={normal:'Risposte automatiche al risultato esatto. I tempi distinguono primo tasto e completamento.',missing:'Trova il numero nascosto: le operazioni inverse ti aiutano.',chain:'Segui la catena e scrivi soltanto il risultato finale.',flash:'I numeri appaiono uno alla volta. Somma a mente e rispondi alla fine.',audio:'Ascolta il calcolo senza vederlo. Puoi riascoltarlo; serve una voce del dispositivo.',estimate:'Scrivi una stima entro ±5% e premi Conferma.',discount:'Calcola il prezzo scontato. Puoi inserire i centesimi con la virgola.',vat:'Calcola il totale comprensivo di IVA al 22%.',change:'Calcola il resto in euro, con i centesimi.',tip:'Calcola l’importo della mancia in euro.'};
+  $('exercise-mode').value=state.settings.exercise;
+  $('adaptive-mode').checked=state.settings.adaptive;
+  $('exercise-description').textContent=descriptions[state.settings.exercise]||descriptions.normal;
+  const skills=Object.keys(state.facts).filter(k=>k.startsWith('s:')).map(k=>({key:k,f:parseFact(state.facts[k])})).sort((a,b)=>(b.f.last||0)-(a.f.last||0));
+  $('skill-list').innerHTML='<h2>Le tue abilità</h2>'+(skills.length?skills.slice(0,15).map(({key,f})=>{
+    const a=f.adaptive,accuracy=a?.total?Math.round(a.correct/a.total*100)+'%':'Da misurare';
+    return '<div class="skill-row"><span>'+esc(keyText(key))+'<br><small>'+accuracy+' al primo tentativo · difficoltà '+(a?.tier||2)+'/5</small></span><button class="btn" data-skill="'+esc(key.slice(2))+'">Allena</button></div>';
+  }).join(''):'<p class="hint">Le abilità appariranno dopo i primi esercizi. Per i calcoli grandi alleniamo la famiglia, con esempi nuovi.</p>');
+  document.querySelectorAll('#skill-list [data-skill]').forEach(b=>b.onclick=()=>startTrickDrill(b.dataset.skill,Engine.skillName(b.dataset.skill),60));
+  const attempts=Object.values(state.facts).flatMap(v=>parseFact(v).attempts).sort((a,b)=>b.t-a.t);
+  const unique=[...new Map(attempts.map(a=>[a.t+':'+a.text+':'+a.input,a])).values()].slice(0,8);
+  $('error-analysis').innerHTML='<h2>Risposte da rivedere</h2>'+(unique.length?unique.map((a,i)=>'<div class="skill-row"><span>'+esc(a.text||'Calcolo')+'<br><small>Hai scritto '+esc(a.input)+' · atteso '+esc(a.expected)+'<br>'+esc(Engine.ERROR_LABELS[a.type]||Engine.ERROR_LABELS.other)+'</small></span>'+(Engine.errorSkill(a.type)?'<button class="btn" data-error="'+i+'">Allena</button>':'')+'</div>').join(''):'<p class="hint">Qui trovi le risposte sbagliate e possibili schemi di errore, senza confondere un’ipotesi con una diagnosi.</p>');
+  document.querySelectorAll('#error-analysis [data-error]').forEach(b=>b.onclick=()=>startErrorDrill(unique[+b.dataset.error]));
+  const killers=hardList('x').filter(x=>x.key.startsWith('k')).slice(0,7);
+  $('start-killers').disabled=!killers.length;
+  $('killers-description').textContent=killers.length?'Scelti dai tuoi dati: '+killers.map(x=>keyText(x.key)).join(', ')+'.':'Gioca qualche round con le tabelline: sceglieremo dai tuoi dati fino a 7 calcoli su cui concentrarti.';
+  $('start-killers').onclick=()=>startTargetedDrill(killers.map(x=>x.key),'I miei calcoli difficili',60);
+  if(!$('extra-techniques').children.length){
+    $('extra-techniques').style.display='contents';
+    Engine.TECHNIQUES.forEach(([id,title,description])=>{
+      const card=document.createElement('div');card.className='pcard';
+      const h=document.createElement('h2');h.textContent=title;
+      const p=document.createElement('p');p.className='hint';p.textContent=description;
+      const button=document.createElement('button');button.className='btn primary wide';button.textContent='Allena: '+title+' (1 min)';button.onclick=()=>startTrickDrill(id,title,60);
+      card.append(h,p,button);$('extra-techniques').appendChild(card);
+    });
+  }
+}
+
 /* ---------- daily training and spaced review ---------- */
 function renderDaily(){
   const now=Date.now(),queue=reviewQueue(state.facts,now);
@@ -901,14 +974,14 @@ function renderDaily(){
   $('daily-badge').className='pill '+(done?'ok':'go');
   $('start-daily').textContent=done?'Fai un altro allenamento':'Inizia l’allenamento di oggi';
   $('daily-status').textContent=queue.length
-    ? queue.length+' calcoli da ripassare: oggi alterniamo recupero e verifica mista.'
+    ? queue.length+' calcoli o abilità da ripassare: oggi alterniamo recupero e verifica mista.'
     : 'Una sessione guidata al livello selezionato, con ripasso dei tuoi punti deboli.';
   $('start-review').hidden=!queue.length;
   $('start-review').textContent='Solo ripasso · '+queue.length+' in scadenza (2 min)';
-  const nextDue=Object.values(state.facts).map(parseFact).filter(f=>f.n||f.recent.length)
+  const nextDue=Object.values(state.facts).map(parseFact).filter(f=>!f.trackOnly&&(f.n||f.recent.length))
     .map(f=>f.review?f.review.due:f.last+DAY_MS).filter(t=>t>now).sort((a,b)=>a-b)[0];
   $('review-next').textContent=queue.length
-    ? 'Ripassi progressivi a 1, 3, 7, 14 e 30 giorni; dopo un errore, il calcolo torna tra 10 minuti.'
+    ? 'Ripassi progressivi a 1, 3, 7, 14 e 30 giorni. Per le abilità generiamo esempi nuovi; dopo un errore torniamo tra 10 minuti.'
     : nextDue?'Prossimo ripasso: '+new Date(nextDue).toLocaleString('it-IT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'.'
     : 'I primi calcoli che risolvi entreranno automaticamente nel ripasso.';
 }
@@ -917,19 +990,19 @@ function renderDaily(){
 function renderHard(){
   const f=state.settings.filter,list=hardList(f),box=$('hardlist');
   document.querySelectorAll('#opfilter button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.o===f));
-  $('start-hard').disabled=hardList('all').length<4;
+  $('start-hard').disabled=!hardList('all').length;
   if(!list.length){
     box.innerHTML='<div class="empty"><strong>Ancora niente da mostrare</strong>Gioca un round: qui compariranno i calcoli su cui impieghi più tempo o commetti errori, dal più critico.</div>';
     return;
   }
-  const top=list.slice(0,40),max=top[0].med||1;
+  const top=list.slice(0,40),max=Math.max(...top.map(x=>x.rankMs),1);
   box.innerHTML='<div class="list">'+top.map(it=>{
     const txt=keyText(it.key);
     const errBadge=it.err>0?`<span class="pill bad" style="margin-left:6px;font-size:10px">${it.err} ${it.err===1?'errore recente':'errori recenti'}</span>`:'';
-    return '<div class="item"><span class="q">'+txt+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(it.med/max*100))+'%"></i></span><span class="v">'+sec(it.med)+errBadge+'<small>'+it.n+(it.n===1?' volta':' volte')+'</small></span></div>';
+    return '<div class="item"><span class="q" style="white-space:normal;font-size:13px">'+esc(txt)+'</span><span class="bar"><i style="width:'+Math.max(4,Math.min(100,Math.round(it.rankMs/max*100)))+'%"></i></span><span class="v">'+(it.hasTime?sec(it.med):'–')+errBadge+'<small>'+(it.first?'primo tasto':it.hasTime?'totale storico':'nessuna risposta autonoma')+' · '+it.n+' volte</small></span></div>';
   }).join('')+'</div>';
 }
-function keyText(k){const m=/^k(\d+)([pmxd])(\d+)$/.exec(k);return m[1]+' '+SYM[m[2]]+' '+m[3]}
+function keyText(k){if(k.startsWith('s:'))return Engine.skillName(k.slice(2));const m=/^k(\d+)([pmxd])(\d+)$/.exec(k);return m?m[1]+' '+SYM[m[2]]+' '+m[3]:k}
 
 /* ---------- render matrice heatmap ---------- */
 let selectedMatrixCell = null;
@@ -1004,7 +1077,7 @@ function renderMatrix(){
       cell.dataset.ans = item.ans;
 
       const val = item.ans;
-      const sub = med ? (med/1000).toFixed(1)+'s' : '';
+      const sub = med ? (med/1000).toFixed(1)+'s'+(factStats(fact).first?'':'*') : '';
       cell.innerHTML = `<span>${val}</span>${sub ? `<small>${sub}</small>` : ''}`;
       cell.onclick = () => selectMatrixCell(r, c, op, item.ans, fact, med, err);
 
@@ -1056,7 +1129,7 @@ function selectMatrixCell(r, c, op, ans, fact, med, err){
   }
 
   $('mat-drill-desc').textContent = fact && (fact.n||fact.recent.length)
-    ? `Completato ${fact.n} volte · ${err} errori recenti · ${fact.err} totali. Verifiche miste: ${factStats(fact).count} risposte su ${factStats(fact).days} giorni.`
+    ? `Completato ${fact.n} volte · ${err} errori recenti · ${fact.err} totali. ${factStats(fact).first?'Tempo al primo tasto':'* Tempo totale storico'}. Verifiche miste: ${factStats(fact).count} risposte su ${factStats(fact).days} giorni.`
     : 'Nessun tentativo registrato finora. Allenalo per fissarlo nella memoria.';
 
   $('mat-drill-btn').textContent = `Allena ${r} ${SYM[op]} ${c} (1 min)`;
@@ -1128,6 +1201,8 @@ function renderProg(){
   let masteredCount = 0, seenCount = 0;
   for(const k in state.facts){
     const f = parseFact(state.facts[k]);
+    if(f.trackOnly)continue;
+    if(k.startsWith('k')){const p=Engine.fromKey(k);if(p&&Engine.aggregate(p))continue}
     if(f.times.length||f.recent.length){
       seenCount++;
       if(factStats(f).mastered){
@@ -1140,15 +1215,16 @@ function renderProg(){
   $('stat-seen-count').textContent = seenCount;
   $('stat-mastered-pct').textContent = pct + '%';
 
-  const box=$('prog'),played=LEVELS.filter(l=>state.history.some(h=>h.l===l.id&&h.m==='n'&&h.dur===120));
+  const box=$('prog'),played=LEVELS.filter(l=>state.history.some(h=>h.l===l.id&&h.m==='n'&&h.dur===120&&(!h.exercise||h.exercise==='normal')));
   if(!played.length){
     box.innerHTML='<div class="empty"><strong>Nessun round da 2 minuti ancora</strong>Dopo il primo round vedrai qui punteggi, media, ops/min e giorni sopra obiettivo per ogni livello.</div>';
     return;
   }
   box.innerHTML=played.slice().reverse().map(l=>{
     const st=levelStats(l.id),last=st.rs.slice(-20).map(h=>h.s);
-    let pill='';
-    if(l.target){pill=st.streak>=3?'<span class="pill ok">Pronto a salire</span>':st.streak>0?'<span class="pill go">'+st.streak+'/3 giorni sopra obiettivo</span>':'<span class="pill mut">sotto obiettivo</span>'}
+    const recent=st.rs.filter(h=>Number.isFinite(h.accuracy)).slice(-3);
+    const accuracy=recent.length?Math.round(recent.reduce((s,h)=>s+h.accuracy,0)/recent.length):null;
+    const pill=accuracy===null?'<span class="pill mut">Storico precedente</span>':'<span class="pill '+(accuracy>=80?'ok':'go')+'">Precisione '+accuracy+'%</span>';
     const avgOpm = st.avg3 != null ? ((st.avg3 / 120) * 60).toFixed(1) : '–';
     return '<div class="pcard"><div class="top"><h2>'+(l.id==='c'?'Personalizzato':'Livello '+l.id)+'</h2>'+pill+'</div>'+
       '<div class="stats"><div><b>'+(st.avg3==null?'–':Math.round(st.avg3))+'</b><span>media 3 ('+avgOpm+' op/m)</span></div><div><b>'+st.best+'</b><span>record ('+((st.best/120)*60).toFixed(1)+' op/m)</span></div><div><b>'+(l.target||'–')+'</b><span>obiettivo</span></div></div>'+
@@ -1156,7 +1232,7 @@ function renderProg(){
   }).join('');
 }
 
-function renderAll(){renderLevels();renderCustom();renderDaily();renderMatrix();renderHard();renderProg()}
+function renderAll(){ensureSkillRecords();renderLevels();renderCustom();renderDaily();renderLearningUI();renderMatrix();renderHard();renderProg()}
 
 /* ---------- tabs & controlli ---------- */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
@@ -1175,6 +1251,8 @@ $('start').onclick=()=>startGame('n');
 $('start-hard').onclick=()=>startGame('h');
 $('start-daily').onclick=startDaily;
 $('start-review').onclick=startReview;
+$('exercise-mode').onchange=()=>{state.settings.exercise=$('exercise-mode').value;saveLocal();renderLearningUI()};
+$('adaptive-mode').onchange=()=>{state.settings.adaptive=$('adaptive-mode').checked;saveLocal();renderLevels()};
 // Refresh deadlines after returning to the app or crossing a review deadline.
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderDaily()});
 setInterval(()=>{if(!document.hidden)renderDaily()},60000);
@@ -1224,7 +1302,7 @@ document.querySelectorAll('[data-trick]').forEach(b => {
 
 function exportText(){
   const l=hardList(state.settings.filter);
-  return l.map((it,i)=>(i+1)+'. '+keyText(it.key)+' — '+sec(it.med)+' ('+it.n+(it.n===1?' volta':' volte')+(it.err?' · '+it.err+' err':'')+')').join('\n');
+  return l.map((it,i)=>(i+1)+'. '+keyText(it.key)+' — '+(it.hasTime?sec(it.med):'tempo non misurato')+' ('+it.n+(it.n===1?' volta':' volte')+(it.err?' · '+it.err+' err':'')+')').join('\n');
 }
 $('copy').onclick=async()=>{
   const t=exportText();if(!t){toast('Elenco vuoto: gioca prima un round');return}
@@ -1235,7 +1313,7 @@ $('copy').onclick=async()=>{
 $('csv').onclick=()=>{
   const l=hardList(state.settings.filter);
   if(!l.length){toast('Elenco vuoto: gioca prima un round');return}
-  const csv='calcolo;operazione;mediana_secondi;volte;errori_recenti;errori_storici\n'+l.map(it=>keyText(it.key)+';'+SYM[it.op]+';'+(it.med/1000).toFixed(2).replace('.',',')+';'+it.n+';'+it.err+';'+it.totalErr).join('\n');
+  const csv='calcolo;operazione;mediana_secondi;metrica;volte;errori_recenti;errori_storici\n'+l.map(it=>keyText(it.key)+';'+(SYM[it.op]||'miste')+';'+(it.hasTime?(it.med/1000).toFixed(2).replace('.',','):'')+';'+(it.first?'primo_tasto':it.hasTime?'totale_storico':'non_misurato')+';'+it.n+';'+it.err+';'+it.totalErr).join('\n');
   downloadFile('calcoli-lenti.csv', csv, 'text/csv;charset=utf-8');
   toast('CSV calcoli lenti scaricato');
 };
@@ -1244,7 +1322,7 @@ $('csv').onclick=()=>{
 $('btn-export-json').onclick=()=>{
   const backup={
     app:'calcolo-a-mente',
-    version:2,
+    version:3,
     exportedAt:new Date().toISOString(),
     facts:state.facts,
     history:state.history,
@@ -1290,14 +1368,14 @@ $('file-import-json').onchange=(e)=>{
 
 $('btn-export-rounds-csv').onclick=()=>{
   if(!state.history.length){toast('Nessun round registrato');return}
-  const header='data;orario;livello;modalita;punteggio;ops_al_minuto;errori;durata_sec\n';
+  const header='data;orario;livello;modalita;punteggio;ops_al_minuto;errori;durata_sec;primo_tasto_ms;aiuti;precisione_primo_tentativo\n';
   const rows=state.history.map(h=>{
     const d=new Date(h.t);
     const timeStr=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     const lvlStr=h.l==='c'?'Personalizzato':h.l==='drill'?'Mirato':h.l==='trick'?'Tecnica':('Livello '+h.l);
-    const modeStr=h.m==='n'?'Normale':h.m==='h'?'Difficili':h.m==='trick'?'Trucchi':h.m==='daily'?'Oggi: '+h.phase:h.m==='review'?'Ripasso':'Drill';
+    const modeStr=h.m==='n'?(h.exercise&&h.exercise!=='normal'?h.exercise:'Normale'):h.m==='h'?'Difficili':h.m==='trick'?'Trucchi':h.m==='daily'?'Oggi: '+h.phase:h.m==='review'?'Ripasso':'Drill';
     const opm=((h.s / (h.dur || 120)) * 60).toFixed(1);
-    return [h.d, timeStr, lvlStr, modeStr, h.s, opm, (h.err||0), h.dur].join(';');
+    return [h.d,timeStr,lvlStr,modeStr,h.s,opm,(h.err||0),h.dur,h.firstMs??'',h.assisted??'',h.accuracy??''].join(';');
   }).join('\n');
   downloadFile(`storico-round-${today()}.csv`, header+rows, 'text/csv;charset=utf-8');
   toast('Storico round scaricato');
@@ -1310,10 +1388,7 @@ $('btn-reset-data').onclick=()=>{
     state.facts={};
     state.history=[];
     saveLocal();
-    if(refs){
-      refs.facts.set({f:{}});
-      refs.hist.set({h:[]});
-    }
+    pushDb();
     renderAll();
     toast('Tutti i dati sono stati azzerati');
   }
@@ -1321,6 +1396,8 @@ $('btn-reset-data').onclick=()=>{
 
 /* ---------- logica di gioco (round normale, drill e trucchi) ---------- */
 let G=null,raf=0;
+let presentationTimers=[];
+function clearPresentation(){presentationTimers.forEach(clearTimeout);presentationTimers=[];if(G)G.presentationToken=(G.presentationToken||0)+1;if(window.speechSynthesis)window.speechSynthesis.cancel()}
 const DAILY_PHASES=[
   {id:'warmup',title:'Riscaldamento',dur:60},
   {id:'review',title:'Ripasso',dur:120},
@@ -1328,10 +1405,12 @@ const DAILY_PHASES=[
 ];
 function beginRound(options){
   cancelAnimationFrame(raf);
+  clearPresentation();
   const now=performance.now();
   G=Object.assign({
     score:0,totalErrors:0,curErrors:0,log:[],cur:null,shown:0,input:'',
-    pool:null,lastKey:null,done:false,session:Date.now()+'-'+Math.random().toString(36).slice(2)
+    pool:null,lastKey:null,done:false,session:Date.now()+'-'+Math.random().toString(36).slice(2),
+    exercise:'normal',retryQueue:[],retryScheduled:new Set(),presented:-1,skillScores:{},revealed:false,ready:false
   },options,{end:now+options.dur*1000});
   $('glabel').textContent=G.label;
   $('gscore').textContent='0';$('gtime').textContent=G.dur;
@@ -1346,16 +1425,18 @@ function startGame(mode){
   let pool=null;
   if(mode==='h'){
     pool=hardList('all').slice(0,20);
-    if(pool.length<4){toast('Servono più dati: gioca qualche round normale');return}
+    if(!pool.length){toast('Gioca prima un round');return}
   }
+  if(mode==='n'&&state.settings.exercise==='audio'&&!canSpeak())return;
   beginRound({mode,level:lvl.id,cfg,dur:state.settings.dur,pool,
-    label:mode==='h'?'Le più lente':(lvl.id==='c'?'Personalizzato':'Livello '+lvl.id)});
+    exercise:mode==='n'?state.settings.exercise:'normal',
+    label:mode==='h'?'Calcoli e abilità difficili':state.settings.exercise==='normal'?(lvl.id==='c'?'Personalizzato':'Livello '+lvl.id):$('exercise-mode').selectedOptions[0].textContent});
 }
 
 function startTargetedDrill(keys, label, dur=60){
   const pool=[...new Set(keys)].map(k=>{
     const f=state.facts[k]?parseFact(state.facts[k]):null;
-    return{key:k,med:f&&f.times.length?median(f.times.slice(-5)):2500};
+    return{key:k,med:f&&(f.times.length||f.firstTimes.length)?factStats(f).med:2500};
   });
   if(!pool.length)return;
   beginRound({mode:'drill',level:'drill',cfg:null,dur,pool,label});
@@ -1363,6 +1444,10 @@ function startTargetedDrill(keys, label, dur=60){
 
 function startTrickDrill(trickId, label, dur=60){
   beginRound({mode:'trick',trickId,level:'trick',cfg:null,dur,label});
+}
+function startErrorDrill(attempt){
+  beginRound({mode:'error',level:'drill',cfg:null,dur:60,errorType:attempt.type,errorAttempt:attempt,
+    label:'Recupero: '+Engine.ERROR_LABELS[attempt.type]});
 }
 
 function startReview(){
@@ -1374,88 +1459,176 @@ function startReview(){
 function startDaily(){
   const lvl=levelById(state.settings.level),cfg=cfgOf(lvl);
   if(!['plus','minus','times','div'].some(o=>cfg[o])){toast('Scegli almeno un’operazione');return}
+  if(state.settings.exercise==='audio'&&!canSpeak())return;
   const due=reviewQueue(state.facts).slice(0,12);
   const daily={id:Date.now()+'-'+Math.random().toString(36).slice(2),level:lvl.id,
-    cfg:JSON.parse(JSON.stringify(cfg)),pool:due.length?due:hardList('all').slice(0,12),rounds:[]};
+    exercise:state.settings.exercise,cfg:JSON.parse(JSON.stringify(cfg)),pool:due.length?due:hardList('all').slice(0,12),rounds:[]};
   startDailyPhase(daily,0);
 }
 function startDailyPhase(daily,index){
   const phase=DAILY_PHASES[index];
   beginRound({mode:'daily',level:daily.level,cfg:daily.cfg,dur:phase.dur,
     pool:phase.id==='warmup'?null:daily.pool,daily,phase:phase.id,phaseIndex:index,
+    exercise:daily.exercise,
     label:(index+1)+'/3 · '+phase.title});
 }
 
 function pickFromPool(pool){
   if(pool.length===1) return fromKey(pool[0].key);
-  const tot=pool.reduce((s,p)=>s+Math.max(1,p.med),0);
+  const tot=pool.reduce((s,p)=>s+Math.max(1,p.rankMs??p.med),0);
   let r=Math.random()*tot;
   for(const p of pool){
-    r-=Math.max(1,p.med);
+    r-=Math.max(1,p.rankMs??p.med);
     if(r<=0) return fromKey(p.key);
   }
   return fromKey(pool[0].key);
 }
 
+function newProblem(){
+  if(G.exercise!=='normal'&&G.exercise!=='missing')return Engine.generateSkill(G.exercise,skillTier(G.exercise));
+  let p;
+  if(state.settings.adaptive&&/^\d+$/.test(G.level)&&+G.level>=5){
+    const ids=[];
+    if(G.cfg.plus)ids.push('add-carry','add-clear');if(G.cfg.minus)ids.push('sub-borrow','sub-clear');
+    if(G.cfg.times)ids.push('mul-2x1','mul-2x2');if(G.cfg.div)ids.push('div-large');
+    if(ids.length){
+      const weights=ids.map(id=>{const a=G.skillScores[id]||parseFact(state.facts['s:'+id]||'').adaptive;return a?.total?1-a.correct/a.total+.25:1});
+      let n=Math.random()*weights.reduce((a,b)=>a+b,0),id=ids[0];
+      for(let i=0;i<ids.length;i++){n-=weights[i];if(n<=0){id=ids[i];break}}
+      p=Engine.generateSkill(id,skillTier(id));
+      // Keep adaptive practice inside the selected level's advertised ranges.
+      if(G.level==='5'){
+        for(let i=0;i<40;i++){const candidate=gen(G.cfg);if(candidate.skill===id){p=candidate;break}}
+        if(p.op==='p'&&p.x>20)p=p.y<=20?mk('p',p.y,p.x):gen(G.cfg);
+        if(p.op==='m'&&p.y>20)p=gen(G.cfg);
+      }
+      if(p.op==='x'&&G.cfg.mul){
+        const low=Math.min(p.x,p.y),high=Math.max(p.x,p.y),m=G.cfg.mul;
+        p=mk('x',Math.max(m[0],Math.min(low,m[1])),Math.max(m[2],Math.min(high,m[3])));
+      }
+    }
+  }
+  p=p||gen(G.cfg);
+  return G.exercise==='missing'?Engine.missing(p):p;
+}
 function next(){
+  clearPresentation();
+  G.presented++;
   let p,tries=0;
+  if(G.retryQueue.length&&G.retryQueue[0].at<=G.presented)p=G.retryQueue.shift().problem;
+  else {
   do{
-    if(G.mode==='trick') p=genTrickProblem(G.trickId);
+    if(G.mode==='error')p=Engine.errorExercise(G.errorType,G.errorAttempt,skillTier(Engine.errorSkill(G.errorType)));
+    else if(G.mode==='trick') p=genTrickProblem(G.trickId);
     else if(G.mode==='drill'||G.mode==='review') p=pickFromPool(G.pool);
     else if(G.mode==='daily'&&G.pool&&G.pool.length){
       const usePool=G.phase==='review'||(G.phase==='check'&&Math.random()<.5);
-      p=usePool?pickFromPool(G.pool):gen(G.cfg);
+      p=usePool?pickFromPool(G.pool):newProblem();
     }
-    else p=(G.pool&&G.pool.length&&Math.random()<.8)?pickFromPool(G.pool):gen(G.cfg);
+    else p=(G.pool&&G.pool.length&&Math.random()<.8)?pickFromPool(G.pool):newProblem();
     tries++;
   }while(p.key===G.lastKey&&tries<6);
+  }
 
-  G.cur=p;G.lastKey=p.key;G.input='';G.curErrors=0;G.shown=performance.now();
+  G.cur=Engine.annotate(p);G.lastKey=p.key;G.input='';G.curErrors=0;G.firstMs=null;G.answers=[];G.lastWrong=null;G.shown=performance.now();G.revealed=false;G.helpAtMs=null;G.ready=true;G.audioFallback=false;
+  $('help-panel').hidden=true;$('keys').hidden=false;$('show-solution').hidden=false;
+  $('replay-audio').hidden=G.cur.skill!=='audio';$('question-status').textContent=p.repeat?'Ripasso dopo l’aiuto':p.confirm?'Premi Conferma quando hai finito':p.instruction||'';
+  $('problem').classList.toggle('word',!!p.special||p.form==='missing');
   $('problem').textContent=p.text;drawAnswer();
+  if(p.numbers)presentFlash();
+  else if(G.cur.skill==='audio')speakProblem();
 }
+
+function canSpeak(){if(window.speechSynthesis&&window.SpeechSynthesisUtterance)return true;toast('Questo browser non dispone della voce: scegli un altro esercizio');return false}
+function speakProblem(){
+  if(!canSpeak()){$('problem').textContent=G.cur.text;G.audioFallback=true;G.ready=true;G.shown=performance.now();return}
+  clearPresentation();const round=G,p=G.cur,token=G.presentationToken;
+  G.ready=false;$('problem').textContent='Ascolta…';$('question-status').textContent='Rispondi dopo la lettura';
+  const utterance=new window.SpeechSynthesisUtterance(p.speech);utterance.lang='it-IT';utterance.rate=.85;
+  const available=window.speechSynthesis.getVoices();
+  utterance.voice=available.find(v=>v.lang.startsWith('it')&&v.localService)||available.find(v=>v.lang.startsWith('it'))||null;
+  const current=()=>G===round&&!G.done&&G.cur===p&&!G.revealed&&G.presentationToken===token;
+  utterance.onend=()=>{if(current()){G.ready=true;G.shown=performance.now();$('problem').textContent='Qual è il risultato?';$('question-status').textContent=''}};
+  utterance.onerror=()=>{if(current()){G.ready=true;G.audioFallback=true;G.shown=performance.now();$('problem').textContent=p.text;$('question-status').textContent='Voce non disponibile: esercizio visivo'}};
+  window.speechSynthesis.speak(utterance);
+  presentationTimers.push(setTimeout(()=>{if(current()&&!G.ready){window.speechSynthesis.cancel();utterance.onerror()}},15000));
+}
+function presentFlash(){
+  const round=G,p=G.cur;G.ready=false;$('question-status').textContent='Somma senza digitare: rispondi alla fine';
+  const show=index=>{
+    if(G!==round||G.done||G.cur!==p||G.revealed)return;
+    if(index>=p.numbers.length){G.ready=true;G.shown=performance.now();$('problem').textContent='Somma?';$('question-status').textContent='';return}
+    $('problem').textContent=String(p.numbers[index]);
+    presentationTimers.push(setTimeout(()=>{if(G===round&&G.cur===p&&!G.revealed)$('problem').textContent='·'},p.flashMs-150));
+    presentationTimers.push(setTimeout(()=>show(index+1),p.flashMs));
+  };show(0);
+}
+function observation(extra={}){
+  return {key:G.cur.key,learningKey:Engine.learningKey(G.cur),skill:G.cur.skill,text:G.cur.text,op:G.cur.op,
+    expected:G.cur.ans,ms:Math.max(1,Math.round(G.revealed&&G.helpAtMs!==null?G.helpAtMs:performance.now()-G.shown)),firstMs:G.firstMs,
+    err:G.curErrors||0,answers:G.answers.slice(),repeat:!!G.cur.repeat,assisted:G.audioFallback,...extra};
+}
+function completeProblem(extra={}){
+  const result=observation(extra);G.log.push(result);
+  if(result.completed!==false&&!result.assisted){G.score++;$('gscore').textContent=G.score;playBeep('correct');triggerHaptic('correct')}
+  if(!result.repeat&&state.settings.adaptive){
+    const id=G.cur.skill,prior=G.skillScores[id]||parseFact(state.facts['s:'+id]||'').adaptive;
+    G.skillScores[id]=Engine.adapt(prior,!result.err&&!result.assisted&&result.completed!==false);
+  }
+  next();
+}
+function showHelp(reason){
+  if(!G||G.done||G.revealed)return;
+  G.helpAtMs=performance.now()-G.shown;G.revealed=true;clearPresentation();G.ready=true;
+  $('help-answer').textContent=G.cur.text+' → '+Engine.fmt(G.cur.ans)+(G.cur.money?' €':'');
+  $('help-method').textContent=Engine.hint(G.cur);
+  $('help-panel').hidden=false;$('keys').hidden=true;$('show-solution').hidden=true;$('replay-audio').hidden=true;
+  $('question-status').textContent=reason==='errors'?'Facciamo un passo guidato':reason==='time'?'Un aiuto per sbloccare il calcolo':'Soluzione mostrata';
+  if(!G.retryScheduled.has(G.cur.key)){
+    G.retryScheduled.add(G.cur.key);G.retryQueue=Engine.scheduleRetries(G.retryQueue,G.cur,G.presented);
+  }
+}
+$('show-solution').onclick=()=>showHelp('manual');
+$('help-next').onclick=()=>{if(G?.revealed)completeProblem({assisted:true,completed:false})};
+$('replay-audio').onclick=()=>{if(G&&!G.done&&!G.revealed){G.audioFallback=true;speakProblem()}};
 
 function drawAnswer(bad){const a=$('answer');a.textContent=G.input;a.classList.toggle('bad',!!bad)}
 
 function press(k){
   if(!G||G.done)return;
   if(performance.now()>=G.end){finish();return}
-  if(k==='del')G.input=G.input.slice(0,-1);
-  else if(k==='clr')G.input='';
-  else if(G.input.length<6)G.input+=k;
+  if(!G.ready||G.revealed)return;
+  if((/^\d$/.test(k)||k==='.')&&G.firstMs===null)G.firstMs=Math.max(0,Math.round(performance.now()-G.shown));
+  if(k==='del'){G.input=G.input.slice(0,-1);G.lastWrong=null}
+  else if(k==='clr'){G.input='';G.lastWrong=null}
+  else if(k==='.'&&!G.input.includes('.'))G.input=(G.input||'0')+'.';
+  else if(/^\d$/.test(k)&&G.input.length<10)G.input+=k;
 
-  if(G.input!==''&&+G.input===G.cur.ans){
-    playBeep('correct');
-    triggerHaptic('correct');
-    G.log.push({
-      key:G.cur.key,
-      text:G.cur.text,
-      op:G.cur.op,
-      ms:Math.max(1,Math.round(performance.now()-G.shown)),
-      err:G.curErrors||0
-    });
-    G.score++;
-    $('gscore').textContent=G.score;
-    next();
-    return;
-  }
-  const bad=G.input.length>=String(G.cur.ans).length;
+  if(Engine.acceptable(G.cur,G.input)&&(!G.cur.confirm||k==='enter')){completeProblem();return}
+  const submitted=k==='enter'||(!G.cur.confirm&&/^\d$/.test(k)&&G.input.length>=String(G.cur.ans).length);
+  const bad=G.input!==''&&submitted&&!Engine.acceptable(G.cur,G.input);
   drawAnswer(bad);
-  if(bad&&/\d/.test(k)){
+  if(bad&&(G.lastWrong!==G.input||k==='enter')){
     playBeep('error');
     triggerHaptic('error');
     G.curErrors=(G.curErrors||0)+1;
     G.totalErrors=(G.totalErrors||0)+1;
+    G.lastWrong=G.input;
+    G.answers.push({input:G.input,type:Engine.diagnose(G.cur,G.input)});
     const a=$('answer');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake');
+    if(G.curErrors>=2)showHelp('errors');
   }
 }
 
 document.querySelectorAll('#keys button').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();press(b.dataset.k)}));
-document.querySelectorAll('#keys button').forEach(b=>b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();press(b.dataset.k)}}));
+document.querySelectorAll('#keys button').forEach(b=>b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();press(b.dataset.k)}}));
 document.addEventListener('keydown',e=>{
   if(!G||G.done||$('game').hidden)return;
   if(/^\d$/.test(e.key)){e.preventDefault();press(e.key)}
   else if(e.key==='Backspace'){e.preventDefault();press('del')}
   else if(e.key==='Escape'){e.preventDefault();press('clr')}
+  else if(e.key==='Enter'){e.preventDefault();if(G.revealed)$('help-next').click();else press('enter')}
+  else if(e.key==='.'||e.key===','){e.preventDefault();press('.')}
 });
 
 function tick(){
@@ -1466,6 +1639,7 @@ function tick(){
     const elapsed=(G.dur*1000-left)/1000;
     $('gtime').textContent=Math.ceil(left/1000);
     $('tline').style.transform='scaleX('+(left/(G.dur*1000))+')';
+    if(G.ready&&!G.revealed&&performance.now()-G.shown>=6000)showHelp('time');
 
     if(elapsed>=2){
       const liveOpm=((G.score/elapsed)*60).toFixed(1);
@@ -1480,17 +1654,20 @@ function tick(){
 function finish(partial){
   if(!G||G.done)return;
   G.done=true;cancelAnimationFrame(raf);
+  clearPresentation();
   if(!partial) playBeep('finish');
   const now=Date.now();
-  const observations=G.log.slice();
-  const mixed=new Set(G.log.map(r=>r.key)).size>=2;
   // Preserve errors on the unanswered problem as well as completed responses.
-  if(G.curErrors)observations.push({key:G.cur.key,err:G.curErrors,completed:false});
+  if(G.curErrors||G.revealed||G.firstMs!==null)G.log.push(observation({completed:false,assisted:G.revealed||G.audioFallback}));
+  const observations=G.log.slice();
+  const mixed=new Set(G.log.filter(r=>r.completed!==false&&!r.assisted&&!r.repeat).map(r=>r.key)).size>=2;
   const byFact=new Map();
-  observations.forEach(r=>{if(!byFact.has(r.key))byFact.set(r.key,[]);byFact.get(r.key).push(r)});
-  byFact.forEach((results,key)=>{
+  const add=(key,r,trackOnly)=>{if(!byFact.has(key))byFact.set(key,{results:[],trackOnly});byFact.get(key).results.push(r)};
+  observations.forEach(r=>{add(r.learningKey,r,false);if('s:'+r.skill!==r.learningKey)add('s:'+r.skill,r,true)});
+  byFact.forEach(({results,trackOnly},key)=>{
     const f=parseFact(state.facts[key]||'');
-    recordFact(f,results,{now,session:G.session,partial:!!partial,
+    f.trackOnly=trackOnly;
+    recordFact(f,results,{now,session:G.session,partial:!!partial,adaptive:state.settings.adaptive,
       verify:mixed&&(G.mode==='n'||(G.mode==='daily'&&G.phase==='check'))});
     state.facts[key]=packFact(f);
   });
@@ -1505,7 +1682,11 @@ function finish(partial){
       m:G.mode,
       s:G.score,
       dur:G.dur,
-      err:G.totalErrors||0
+      err:G.totalErrors||0,
+      exercise:G.exercise,
+      accuracy:Math.round(G.log.filter(r=>!r.repeat&&!r.err&&!r.assisted&&r.completed!==false).length/Math.max(1,G.log.filter(r=>!r.repeat).length)*100),
+      firstMs:median(G.log.filter(r=>Number.isFinite(r.firstMs)&&!r.assisted&&!r.repeat).map(r=>r.firstMs)),
+      assisted:G.log.filter(r=>r.assisted).length
     };
     if(G.daily){
       entry.phase=G.phase;entry.dailyId=G.daily.id;
@@ -1513,27 +1694,35 @@ function finish(partial){
     }
     state.history.push(entry);
   }
+  if(!partial&&(G.mode==='n'||(G.mode==='daily'&&G.phase==='check'))&&G.exercise==='normal'&&state.settings.adaptive){
+    const nextLevel=Engine.autoLevel(G.level,observations);
+    if(nextLevel!==G.level){state.settings.level=nextLevel;G.levelChange='Livello '+nextLevel+' selezionato automaticamente in base alla precisione di questo round.'}
+  }
   prune();saveLocal();if(observations.length)pushDb();renderAll();
   if(partial)closeGame();else showResult();
 }
 
 function showResult(){
   const res=$('result');
-  const avg=G.log.length?G.log.reduce((s,r)=>s+r.ms,0)/G.log.length:0;
+  const solvedLog=G.log.filter(r=>r.completed!==false&&!r.assisted);
+  const avg=solvedLog.length?solvedLog.reduce((s,r)=>s+r.ms,0)/solvedLog.length:0;
   const opm=((G.score/G.dur)*60).toFixed(1);
-  const totalAttempts=G.score+(G.totalErrors||0);
-  const acc=totalAttempts?Math.round((G.score/totalAttempts)*100):100;
-  const fastMasteredCount = G.log.filter(r => r.ms < 1200 && !r.err).length;
+  const measured=G.log.filter(r=>!r.repeat);
+  const acc=measured.length?Math.round(measured.filter(r=>!r.err&&!r.assisted&&r.completed!==false).length/measured.length*100):0;
+  const firstMedian=median(solvedLog.filter(r=>Number.isFinite(r.firstMs)).map(r=>r.firstMs));
+  const fastMasteredCount = solvedLog.filter(r=>r.firstMs!==null&&r.firstMs<1200&&!r.err&&!r.repeat).length;
 
   const byKey=new Map();
-  G.log.forEach(r=>{if(!byKey.has(r.key)||byKey.get(r.key).ms<r.ms)byKey.set(r.key,r)});
-  const slow=[...byKey.values()].sort((a,b)=>b.ms-a.ms).slice(0,8),max=slow.length?slow[0].ms:1;
+  const responseMs=r=>Number.isFinite(r.firstMs)?r.firstMs:r.ms;
+  const priority=r=>r.assisted?10000:responseMs(r);
+  G.log.forEach(r=>{if(!byKey.has(r.key)||priority(byKey.get(r.key))<priority(r))byKey.set(r.key,r)});
+  const slow=[...byKey.values()].sort((a,b)=>priority(b)-priority(a)).slice(0,8),max=slow.length?Math.max(1,...slow.map(priority)):1;
 
   const opMap={};
-  G.log.forEach(r=>{
+  solvedLog.forEach(r=>{
     if(!opMap[r.op]) opMap[r.op]={count:0,times:[],err:0};
     opMap[r.op].count++;
-    opMap[r.op].times.push(r.ms);
+    opMap[r.op].times.push(responseMs(r));
     opMap[r.op].err+=(r.err||0);
   });
   const opKeys=Object.keys(opMap);
@@ -1552,16 +1741,17 @@ function showResult(){
   let verdict='';
   if(G.mode==='n'){
     const lvl=levelById(G.level);
-    if(lvl.target){
+    if(G.exercise!=='normal')verdict='Sessione completata: '+$('glabel').textContent+'. Continua a lavorare su precisione e autonomia.';
+    else if(lvl.target){
       if(G.dur!==120)verdict='Round da '+G.dur/60+' min: non conta per l\'obiettivo, che vale per i round da 2 minuti.';
       else{
         const st=levelStats(lvl.id);
-        verdict=(G.score>=lvl.target?'Sopra l\'obiettivo di '+lvl.target+'.':'Obiettivo del livello: '+lvl.target+'.')+(st.streak>=3?' Hai superato l\'obiettivo per 3 giorni di fila: puoi passare al livello successivo.':st.avg3!=null?' Media degli ultimi 3 round: '+Math.round(st.avg3)+'.':'');
+        verdict=(G.score>=lvl.target?'Sopra il riferimento di '+lvl.target+'.':'Riferimento del livello: '+lvl.target+'.')+(st.avg3!=null?' Media degli ultimi 3 round: '+Math.round(st.avg3)+'.':'');
       }
     }
   }else if(G.mode==='h'){
     verdict='Round sulle più lente. Continua finché i tempi non si avvicinano agli altri calcoli.';
-  }else if(G.mode==='trick'||G.mode==='drill'){
+  }else if(G.mode==='trick'||G.mode==='drill'||G.mode==='error'){
     verdict='Sessione completata su: '+G.label+'. Per confermare la padronanza, ritrova questi calcoli in un round normale o nella verifica mista di oggi.';
   }else if(G.mode==='review'){
     verdict='Ripasso completato. Le prossime scadenze tengono conto di velocità ed errori di questa sessione.';
@@ -1571,9 +1761,10 @@ function showResult(){
       G.daily.rounds.every(r=>r.score>0)?'Allenamento di oggi completato! La verifica mista contribuisce a confermare la padronanza.':
       'Sessione conclusa. Per completare l’allenamento di oggi, risolvi almeno un calcolo in ognuna delle tre fasi.';
   }
+  if(G.levelChange)verdict+=' '+G.levelChange;
 
   const fastBadge = fastMasteredCount > 0 
-    ? `<span class="pill ok" style="font-size:13px;padding:3px 10px">⚡ ${fastMasteredCount} risposte rapide (&lt;1,2s)</span>`
+    ? `<span class="pill ok" style="font-size:13px;padding:3px 10px">⚡ ${fastMasteredCount} avvii rapidi (&lt;1,2s)</span>`
     : '';
 
   res.innerHTML='<div>'+
@@ -1585,12 +1776,12 @@ function showResult(){
       fastBadge+
     '</div>'+
     '<p class="verdict">'+verdict+'</p>'+
-    '<p class="hint">In media '+(G.log.length?sec(avg):'–')+' per risposta su '+(G.log.length)+' calcoli risolti.</p>'+
+    '<p class="hint">Primo tasto (mediana): '+(solvedLog.length?sec(firstMedian):'–')+' · Tempo totale medio: '+(solvedLog.length?sec(avg):'–')+'. '+G.log.filter(r=>r.assisted).length+' aiuti, '+G.log.filter(r=>r.repeat).length+' ripetizioni. Precisione al primo tentativo: '+acc+'%.</p>'+
     '</div>'+
     breakdownHtml+
-    (slow.length?'<div class="label" style="margin-top:2px">Le più lente di questo round</div><div class="list">'+slow.map(r=>{
+    (slow.length?'<div class="label" style="margin-top:2px">Da rivedere in questo round</div><div class="list">'+slow.map(r=>{
       const errBadge=r.err?`<span class="pill bad" style="margin-left:4px;font-size:10px">${r.err} err</span>`:'';
-      return '<div class="item"><span class="q">'+esc(r.text)+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(r.ms/max*100))+'%"></i></span><span class="v">'+sec(r.ms)+errBadge+'</span></div>';
+      return '<div class="item"><span class="q" style="white-space:normal;font-size:13px">'+esc(r.text)+'</span><span class="bar"><i style="width:'+Math.max(4,Math.round(priority(r)/max*100))+'%"></i></span><span class="v">'+(r.assisted?'Aiuto':r.completed===false?'Non risolto':sec(responseMs(r)))+errBadge+(!r.assisted&&r.completed!==false?'<small>'+(Number.isFinite(r.firstMs)?'primo tasto':'totale')+'</small>':'')+'</span></div>';
     }).join('')+'</div>':'')+
     '<button class="btn primary wide" id="again">Un altro round</button><div class="row"><button class="btn" id="tohard">Allena le più lente</button><button class="btn" id="close">Chiudi</button></div>';
 
@@ -1609,19 +1800,20 @@ function showResult(){
     $('close').textContent='Torna alla home';$('close').onclick=closeGame;
     return;
   }
-  const currentMode=G.mode, currentLabel=G.label, currentPool=G.pool, currentDur=G.dur, currentTrick=G.trickId;
+  const currentMode=G.mode,currentLabel=G.label,currentPool=G.pool,currentDur=G.dur,currentTrick=G.trickId,currentError=G.errorAttempt;
   $('again').onclick=()=>{
     if(currentMode==='trick') startTrickDrill(currentTrick, currentLabel, currentDur);
     else if(currentMode==='drill') startTargetedDrill(currentPool.map(p=>p.key), currentLabel, currentDur);
     else if(currentMode==='review') startReview();
+    else if(currentMode==='error') startErrorDrill(currentError);
     else startGame(currentMode);
   };
   $('tohard').onclick=()=>startGame('h');
   $('close').onclick=closeGame;
 }
 
-function closeGame(){if(G&&!G.done){G.done=true;cancelAnimationFrame(raf)}$('game').hidden=true;document.body.style.overflow='';G=null}
-$('quit').onclick=()=>{if(G&&!G.done&&(G.log.length||G.curErrors))finish(true);else closeGame()};
+function closeGame(){clearPresentation();if(G&&!G.done){G.done=true;cancelAnimationFrame(raf)}$('game').hidden=true;document.body.style.overflow='';G=null}
+$('quit').onclick=()=>{if(G&&!G.done&&(G.log.length||G.curErrors||G.revealed||G.firstMs!==null))finish(true);else closeGame()};
 
 /* ---------- pwa install prompt & service worker ---------- */
 if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){

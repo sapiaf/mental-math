@@ -8,12 +8,13 @@ const { test } = require('node:test');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const start = html.indexOf('/* ---------- learning core');
 const end = html.indexOf('/* ---------- database sync');
+const Engine = require('../training-engine.js');
 const core = vm.runInNewContext(html.slice(start, end) +
-  '\n({parseFact,packFact,factStats,recordFact,reviewQueue,mergeFacts,DAY_MS})');
+  '\n({parseFact,packFact,factStats,recordFact,reviewQueue,mergeFacts,DAY_MS})', { Engine });
 const { parseFact, packFact, factStats, recordFact, reviewQueue, mergeFacts, DAY_MS } = core;
 const noon = Date.parse('2026-11-18T12:00:00Z');
 let serial = 0;
-const answer = (err = 0, ms = 900) => ({ ms, err });
+const answer = (err = 0, ms = 900) => ({ ms, firstMs: ms, err });
 function record(f, results, options = {}) {
   return recordFact(f, results, { now: noon, session: 'round-' + (++serial), ...options });
 }
@@ -77,6 +78,72 @@ test('a current error revokes previously confirmed mastery', () => {
   assert.equal(factStats(f).mastered, true);
   record(f, [answer(1)], { now: noon + DAY_MS + 1000 });
   assert.equal(factStats(f).mastered, false);
+});
+
+test('mastery uses first-key latency even when typing the full answer takes longer',()=>{
+  const f=parseFact('');
+  record(f,Array.from({length:3},()=>({ms:2800,firstMs:900,err:0})),{verify:true});
+  record(f,Array.from({length:2},()=>({ms:3100,firstMs:1000,err:0})),{verify:true,now:noon+DAY_MS});
+  assert.equal(factStats(f).mastered,true);
+  assert.equal(factStats(f).med,900);
+  assert.ok(factStats(f).totalMed>2000);
+});
+
+test('legacy total-time checks cannot be reinterpreted as first-key evidence',()=>{
+  const f=parseFact('');
+  f.checks=[{ms:800,count:3,day:'2026-11-18',session:'old1'},{ms:800,count:3,day:'2026-11-19',session:'old2'}];
+  f.times=[800,800];
+  assert.equal(factStats(parseFact(packFact(f))).mastered,false);
+});
+
+test('assisted answers and immediate repeats do not create independent evidence',()=>{
+  const f=parseFact('');
+  record(f,[{ms:800,firstMs:100,err:0,assisted:true,completed:false}],{verify:true});
+  record(f,[{ms:800,firstMs:100,err:0,repeat:true}],{verify:true,now:noon+DAY_MS});
+  assert.equal(f.checks.length,0);
+  assert.equal(factStats(f).mastered,false);
+  assert.equal(f.firstTimes.length,0);
+});
+
+test('wrong inputs and inferred error types survive backup serialization',()=>{
+  const f=parseFact('');
+  record(f,[{ms:1500,firstMs:1000,err:1,text:'7 × 8',expected:56,answers:[{input:'65',type:'reversed'}]}]);
+  const saved=parseFact(packFact(f));
+  assert.equal(saved.attempts[0].input,'65');
+  assert.equal(saved.attempts[0].expected,56);
+  assert.equal(saved.attempts[0].type,'reversed');
+});
+
+test('skill-only tracking is not duplicated in the review queue',()=>{
+  const f=parseFact('');record(f,[answer()]);f.trackOnly=true;
+  const active=parseFact(packFact(f));active.trackOnly=false;
+  const queue=reviewQueue({'s:table-7':packFact(f),'s:add-carry':packFact(active),k47p38:'5|0|3000|0'},noon+DAY_MS);
+  assert.equal(queue.map(x=>x.key).join(','),'s:add-carry');
+});
+
+test('turning adaptation off preserves the selected skill tier while keeping accuracy',()=>{
+  const f=parseFact('');
+  for(let i=0;i<10;i++)record(f,[answer()],{adaptive:false});
+  assert.equal(f.adaptive.tier,2);assert.equal(f.adaptive.total,10);assert.equal(f.adaptive.correct,10);
+});
+
+test('reading an opened solution does not inflate the recorded response duration',()=>{
+  const source=html.slice(html.indexOf('function observation('),html.indexOf('function completeProblem('));
+  const result=vm.runInNewContext(source+'\nobservation({assisted:true,completed:false});',{
+    Engine,performance:{now:()=>120000},
+    G:{cur:Engine.make('x',7,8),shown:0,revealed:true,helpAtMs:6000,firstMs:800,answers:[],curErrors:2}
+  });
+  assert.equal(result.ms,6000);assert.equal(result.firstMs,800);assert.equal(result.completed,false);
+});
+
+test('repeating the same wrong answer after clearing is a second attempt and opens help',()=>{
+  const source=html.slice(html.indexOf('function press(k)'),html.indexOf("document.querySelectorAll('#keys button')"));
+  const game={ready:true,done:false,revealed:false,end:10000,shown:0,firstMs:null,input:'',cur:Engine.make('x',7,8),curErrors:0,totalErrors:0,answers:[],lastWrong:null};
+  vm.runInNewContext(source+"\nfor(const k of ['6','5','clr','6','5'])press(k);",{
+    Engine,G:game,performance:{now:()=>100},drawAnswer(){},playBeep(){},triggerHaptic(){},
+    $:()=>({classList:{remove(){},add(){}}}),showHelp:()=>{game.revealed=true}
+  });
+  assert.equal(game.totalErrors,2);assert.equal(game.answers.length,2);assert.equal(game.revealed,true);
 });
 
 test('review intervals advance only when a scheduled review is due', () => {
@@ -176,21 +243,24 @@ test('a newer unresolved error survives merge when the completion count is equal
   assert.equal(f.review.days, 0);
 });
 
-test('both entry points ship the same application', () => {
-  assert.equal(fs.readFileSync(path.join(__dirname, '..', 'calcolo.html'), 'utf8'), html);
+test('standalone entry point is generated from the current source', () => {
+  assert.equal(fs.readFileSync(path.join(__dirname, '..', 'calcolo.html'), 'utf8'), require('../scripts/build-standalone.cjs').standalone());
 });
 
 const selectionSource = html.slice(html.indexOf('function pickFromPool('), html.indexOf('function drawAnswer('));
 function nextProblem(game, random = 0.1) {
   const generated = { key: 'k2p3', text: '2 + 3', ans: 5 };
   return vm.runInNewContext(selectionSource + '\nnext(); G.cur;', {
-    G: { lastKey: null, ...game },
+    Engine,
+    G: { lastKey: null,presented: -1,retryQueue: [],answers:[],exercise:'normal',...game },
+    state:{settings:{adaptive:false}},
     Math: Object.assign(Object.create(Math), { random: () => random }),
     gen: () => generated,
+    newProblem: () => generated,
     fromKey: key => ({ key, text: key }),
     performance: { now: () => 0 },
-    $: () => ({}),
-    drawAnswer: () => {}
+    $: () => ({classList:{toggle(){}}}),
+    drawAnswer: () => {},clearPresentation: () => {}
   });
 }
 

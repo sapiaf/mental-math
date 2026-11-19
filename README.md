@@ -2,25 +2,47 @@
 
 Un allenatore di calcolo a mente veloce, minimale e ottimizzato per smartphone e desktop (stile *Zetamac*).
 
-Include tracciamento dei calcoli più difficili tramite mediana dei tempi di risposta, storico dei round con grafici a barre sparkline, livelli progressivi e salvataggio automatico offline.
+Include tempi al primo tasto distinti dalla digitazione, allenamento per abilità, aiuti con ripetizione durante il round, analisi delle risposte sbagliate, difficoltà adattiva e salvataggio automatico offline.
 
 È strutturato come **Progressive Web App (PWA)**: funziona al 100% offline, può essere installata come un'app nativa su iPhone/Android/Desktop, e include strumenti di backup/esportazione JSON e CSV.
 
 ## Allenamento quotidiano e ripasso
 
 - **Allenamento di oggi**: 4 minuti attivi in tre fasi, con una pausa tra le fasi: riscaldamento (1 min), ripasso (2 min), verifica mista (1 min). Usa il livello selezionato e fino a 12 calcoli in scadenza; se non ce ne sono, riprende i punti deboli o genera esercizi del livello. Si segna come completato dopo aver risolto almeno un calcolo in ogni fase.
-- **Ripasso a distanza**: dalla home puoi avviare anche solo il ripasso da 2 minuti. Dopo risposte corrette sotto i 2 secondi mediani, gli intervalli progrediscono a 1, 3, 7, 14 e 30 giorni, solo quando il ripasso precedente è scaduto. Ripetere prima della scadenza non la rimanda e non allunga l’intervallo. Una risposta lenta riporta l’intervallo a 1 giorno; un errore ripropone il calcolo dopo 10 minuti.
-- **Padronanza confermata**: richiede almeno 5 risposte nei round normali o nelle verifiche finali quotidiane, distribuite su almeno 2 giorni. Per ogni calcolo si conservano le ultime 5 verifiche (una osservazione per sessione, con mediana dei tempi e numero di risposte); la mediana delle verifiche deve essere sotto 1,2 secondi, senza errori nelle verifiche considerate e negli ultimi 5 tentativi. Una verifica deve contenere almeno 2 calcoli distinti. I drill ripetitivi non creano prove di padronanza.
+- **Ripasso a distanza**: dalla home puoi avviare anche solo il ripasso da 2 minuti. Dopo risposte corrette sotto i 2 secondi mediani al primo tasto, gli intervalli progrediscono a 1, 3, 7, 14 e 30 giorni, solo quando il ripasso precedente è scaduto. Ripetere prima della scadenza non la rimanda e non allunga l’intervallo. Una risposta lenta riporta l’intervallo a 1 giorno; un errore o un aiuto ripropone il calcolo dopo 10 minuti. Per i numeri grandi viene ripassata l’abilità, generando calcoli nuovi.
+- **Padronanza confermata**: richiede almeno 5 risposte autonome nei round normali o nelle verifiche finali quotidiane, distribuite su almeno 2 giorni. Per ogni calcolo o abilità si conservano le ultime 5 verifiche (una osservazione per sessione); la mediana al primo tasto deve essere sotto 1,2 secondi, senza errori nelle verifiche considerate né errori o aiuti negli ultimi 5 tentativi. Una verifica deve contenere almeno 2 calcoli distinti. Aiuti, ripetizioni immediate e tempi storici senza primo tasto non creano prove di padronanza. Il primo tasto è un indicatore della preparazione della risposta: non separa perfettamente tutti i processi di ragionamento e movimento.
 - Gli **errori recenti**, negli ultimi 5 tentativi, determinano la priorità dei calcoli difficili e il bordo rosso nella matrice. Gli errori totali restano disponibili nei dettagli e nei backup. Anche un errore su un calcolo non ancora risolto viene conservato.
 
-Lo storico e i backup precedenti restano leggibili. I tempi e gli errori storici sono conservati; non vengono inventati risultati recenti o verifiche per i vecchi dati. I calcoli precedenti diventano ripassabili un giorno dopo l’ultima risposta registrata. Scadenze e verifiche vengono salvate insieme ai calcoli, nello stesso localStorage e nel cloud esistente, senza modifiche alla tabella Supabase. Le sessioni quotidiane e i ripassi non modificano gli obiettivi dei round normali da 2 minuti.
+Lo storico e i backup precedenti restano leggibili. I tempi totali e gli errori storici sono conservati, senza inventare tempi al primo tasto; nella matrice il tempo totale storico ha un asterisco. I vecchi calcoli grandi vengono raggruppati per abilità. Scadenze, abilità, risposte sbagliate e verifiche usano il campo `facts` esistente, senza modificare la tabella Supabase. I metadati per abilità hanno chiavi `s:…`, mentre i fatti di base mantengono le chiavi `k…`.
+
+## Aiuti, adattamento e nuovi esercizi
+
+- **Sblocco**: il pulsante “Mostra soluzione / passa” è sempre disponibile. Dopo 2 risposte sbagliate o circa 6 secondi dalla possibilità di rispondere viene mostrato automaticamente risultato e metodo. Continuando, lo stesso esercizio è accodato dopo 3 e 8 esercizi intermedi, entro il tempo disponibile del round. Non vengono creati cicli infiniti di ripetizioni.
+- **Analisi degli errori**: si conservano fino a 20 risposte sbagliate recenti per fatto/abilità, con risultato atteso e ipotesi di errore (riporto/prestito, tabellina vicina, cifre invertite). Dalla scheda Difficili si avviano esercizi mirati; le etichette descrivono ipotesi, non diagnosi certe.
+- **Adattamento**: ogni abilità ha 5 gradi e registra la precisione al primo tentativo. Dopo ogni blocco di 10 esercizi originali, sale con più del 90% di successi e scende sotto l’80%. Aiuti ed errori contano come insuccessi; le ripetizioni immediate sono escluse. Nei round classici completati e nella verifica quotidiana classica, almeno 10 esercizi possono far salire o scendere automaticamente di un livello. Il personalizzato resta manuale; il controllo della difficoltà automatica può essere disattivato.
+- L’obiettivo intorno all’85% è una scelta pratica ispirata a [Wilson et al., 2019](https://doi.org/10.1038/s41467-019-12552-4), non una soglia di apprendimento garantita per il calcolo mentale.
+- **Modalità**: classico, incognite in entrambe le posizioni, catene, Flash Anzan (numeri uno alla volta), solo ascolto, stima con tolleranza inclusiva ±5%, sconti, IVA al 22%, resto e mance.
+- **Audio**: usa la sintesi vocale del dispositivo, preferendo una voce italiana locale. Il calcolo non viene mantenuto sullo schermo; il tempo di risposta parte dopo la lettura. Il riascolto è un aiuto. Se la voce fallisce viene mostrato il calcolo e il tentativo è distinto dai risultati autonomi. Disponibilità e funzionamento offline delle voci dipendono da browser e dispositivo.
+- **Tecniche**: ×11, quadrati terminanti in 5, quadrati 11–25, complementi a 100/1000, somma per differenza, prodotti vicini a 100, due cifre × una cifra da sinistra e ÷5. I “7 calcoli difficili” sono selezionati dai dati personali, senza una lista fissa.
+- Per stime e problemi in euro si preme **Conferma / Invio**. Virgola e punto sono supportati, anche da tastiera. C cancella tutto, ⌫ elimina una cifra.
+
+## Sorgenti e versione standalone
+
+Modifica `index.html`, `training-engine.js` e `db-sync.js`. `calcolo.html` è generato con gli script locali incorporati:
+
+```bash
+node scripts/build-standalone.cjs
+node scripts/build-standalone.cjs --check
+```
+
+Non modificare manualmente `calcolo.html`. La libreria Supabase è fissata a `2.119.0`; non esiste più un adapter implicito `window.claude`. La web app statica non richiede un bundler o dipendenze da installare.
 
 ### Verifica locale
 
 I test non richiedono dipendenze aggiuntive:
 
 ```bash
-node --test tests/training.test.cjs
+node --test tests/*.test.cjs
 ```
 
 ---
@@ -30,7 +52,9 @@ node --test tests/training.test.cjs
 ```text
 mental-math/
 ├── index.html              # Punto d'ingresso principale della Web App
-├── calcolo.html            # Copia standalone completa e autonoma
+├── calcolo.html            # Generato dalle sorgenti, con script locali incorporati
+├── training-engine.js      # Generatori, abilità, analisi errori e adattamento
+├── scripts/build-standalone.cjs # Generazione e controllo della versione standalone
 ├── manifest.webmanifest    # Configurazione PWA (titolo, colori, icone, avvio standalone)
 ├── sw.js                   # Service Worker per il funzionamento e la cache offline
 ├── favicon.svg             # Favicon vettoriale
@@ -41,7 +65,7 @@ mental-math/
 │   └── apple-touch-icon.png# Icona per iOS Home Screen (180x180)
 ├── db-sync.js              # Autenticazione e sincronizzazione Supabase
 ├── db-adapter.example.js   # Esempio per collegare un database cloud (Supabase/Firebase)
-├── tests/training.test.cjs # Verifiche di padronanza, ripasso e selezione esercizi
+├── tests/                  # Test dei generatori, padronanza, ripasso e selezione
 └── README.md               # Documentazione del progetto
 ```
 

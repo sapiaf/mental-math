@@ -1,10 +1,11 @@
-const CACHE_NAME = 'calcolo-mente-v3';
+const CACHE_NAME = 'calcolo-mente-v4';
 
 const STATIC_ASSETS = [
   './',
   './index.html',
   './calcolo.html',
   './db-sync.js',
+  './training-engine.js',
   './manifest.webmanifest',
   './favicon.svg',
   './icons/icon.svg',
